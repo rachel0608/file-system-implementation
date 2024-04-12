@@ -4,7 +4,7 @@ int main() {
 
     // ignore useless signals and init sigaction for child signals
     
-    while true: 
+    main loop: 
         // reset or empty input each time
         if (input){
             free(input);
