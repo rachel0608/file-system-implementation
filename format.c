@@ -2,40 +2,41 @@
 #include <stdlib.h>
 
 #define DISK_SIZE_MB_DEFAULT 1
+#define EXPECTED_ARGS 2
+#define EXECUTABLE argv[0]
 #define FILENAME argv[1]
 #define FLAG argv[2]
 #define FLAG_PRESENT 4
+#define FLAG_PARAM argv[3]
 
 typedef struct {
-    // Define FAT entry structure for FAT-12
-    uint16_t fat_entries[NUM_BLOCKS]; // array representing each block on the disk
-} FATEntry;
+    uint16_t value;  // 12-bit value representing allocation status or block number
+} FAT12Entry;
 
 typedef struct {
     // Define MFT entry structure for storing file metadata
-    uint8_t filename[16];   // File name (max 16 characters)
-    uint32_t file_size;     // File size in bytes
-    uint16_t start_block;   // Starting datablock of file data
-    uint8_t attributes;     // File attributes (read-only, hidden, ...?)
+    uint8_t filename[MAX_NAME];   // File name
+    uint32_t file_size;           // File size in bytes
+    uint16_t start_block;         // Starting datablock of file data
+    uint8_t attributes;           // File attributes (read-only, hidden, ...?)
 } MFTEntry;
 
 int main(int argc, char *argv[]) {
-    char *filename;
-    int disk_size_mb = DISK_SIZE_MB_DEFAULT;
  
     // Parse command-line arguments
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <filename> [-s #]\n", argv[0]);
+    if (argc < EXPECTED_ARGS) {
+        fprintf(stderr, "Usage: %s <filename> -s <num MB requested>\n", EXECUTABLE);
         return EXIT_FAILURE;
     }
 
-    filename = FILENAME;
+    int disk_size_mb = DISK_SIZE_MB_DEFAULT;
+    char *filename = FILENAME;
 
     if (argc == FLAG_PRESENT && strcmp(FLAG, "-s") == 0) {
-        disk_size_mb = atoi(argv[3]);
+        disk_size_mb = atoi(FLAG_PARAM);
     }
 
-    // Create the disk image file
+    // Open disk to format
     FILE *disk_image = fopen(filename, "wb");
     if (!disk_image) {
         perror("Failed to create disk image file");
@@ -45,7 +46,6 @@ int main(int argc, char *argv[]) {
     // Initialize disk image with FAT and MFT structures
     initialize_disk_image(disk_image, disk_size_mb);
 
-    // Close the disk image file
     fclose(disk_image);
 
     printf("Disk image formatted successfully: %s\n", filename);
@@ -53,47 +53,50 @@ int main(int argc, char *argv[]) {
 }
 
 void initialize_disk_image(FILE *disk_image, int disk_size_mb) {
-    // Initialize FAT
     initialize_fat(disk_image, disk_size_mb);
-
-    // Initialize MFT (or file system metadata)
     initialize_mft(disk_image);
 }
 
 void initialize_fat(FILE *disk_image, int disk_size_mb) {
-    // Calculate number of clusters based on disk size (assume cluster size)
-    int num_clusters = disk_size_mb * 1024;  // Assuming 1 cluster = 1 KB
+    // Calculate number of blocks based on disk size
+    int num_blocks = disk_size_mb * 1000;  // Assuming 1 block = 1 KB
 
     // Allocate memory for FAT entries
-    FATEntry *fat_entries = (FATEntry *)malloc(num_clusters * sizeof(FATEntry));
+    FATEntry *fat_entries = (FATEntry *)malloc(num_blocks * sizeof(FATEntry));
     if (!fat_entries) {
         perror("Memory allocation error");
         exit(EXIT_FAILURE);
     }
 
-    // Initialize FAT entries (e.g., set initial cluster allocation status)
-    // Example:
-    // for (int i = 0; i < num_clusters; i++) {
-    //     fat_entries[i].cluster_status = CLUSTER_FREE; // Initialize to free
-    // }
+    // Initialize FAT entries
+    // Assume all blocks are initially free
+    for (int i = 0; i < num_blocks; i++) {
+        if (i == 0 || i == 1) {
+            // Reserved blocks (boot block, superblock)
+            fat_entries[i].value = 0xFFF;  // Mark as reserved (end of file)
+        } else {
+            // Free cluster
+            fat_entries[i].value = 0x000;  // Mark as free
+        }
+    }
 
     // Write FAT entries to disk image file
-    fwrite(fat_entries, sizeof(FATEntry), num_clusters, disk_image);
+    fwrite(fat_entries, num_blocks * sizeof(FATEntry), num_blocks, disk_image);
 
     // Free allocated memory
     free(fat_entries);
 }
 
 void initialize_mft(FILE *disk_image) {
-    // Initialize MFT entries (e.g., for system files and metadata)
-    // Example:
-    // MFTEntry root_directory_entry;
-    // strcpy(root_directory_entry.filename, "ROOT");
-    // root_directory_entry.file_size = 0; // Root directory size initially 0
-    // root_directory_entry.start_cluster = FIRST_CLUSTER_ROOT_DIR;
-    // root_directory_entry.attributes = ATTR_DIRECTORY;
+    // Initialize MFT entries (for system files and metadata)
+    MFTEntry root_directory_entry;
+    strcpy(root_directory_entry.filename, "ROOT");
+    root_directory_entry.file_size = 0; // Root directory size initially 0
+    root_directory_entry.start_cluster = FIRST_BLOCK_ROOT_DIR;
+    root_directory_entry.attributes = DIR_ATTR;
 
     // Write MFT entries to disk image file
-    // fwrite(&root_directory_entry, sizeof(MFTEntry), 1, disk_image);
-    // Write other necessary MFT entries (system files, etc.)
+    fwrite(&root_directory_entry, sizeof(MFTEntry), 1, disk_image);
+    
+    // Write other MFT entries? (system files)
 }
