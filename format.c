@@ -11,7 +11,7 @@
 
 typedef struct {
     uint16_t value;  // 12-bit value representing allocation status or block number
-} FAT12Entry;
+} FATEntry;
 
 typedef struct {
     // Define MFT entry structure for storing file metadata
