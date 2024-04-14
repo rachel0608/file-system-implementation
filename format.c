@@ -8,18 +8,36 @@
 #define FLAG argv[2]
 #define FLAG_PRESENT 4
 #define FLAG_PARAM argv[3]
+#define MAX_NAME 8
 
 typedef struct {
-    uint16_t value;  // 12-bit value representing allocation status or block number
+    uint32_t value;  // 12-bit value representing allocation status or block number
 } FATEntry;
 
 typedef struct {
     // Define MFT entry structure for storing file metadata
     uint8_t filename[MAX_NAME];   // File name
     uint32_t file_size;           // File size in bytes
+    uint32_t file_descriptor;     // FD
     uint16_t start_block;         // Starting datablock of file data
-    uint8_t attributes;           // File attributes (read-only, hidden, ...?)
-} MFTEntry;
+    char* access;                 // File permissions
+    uint32_t position;            // File position
+} FileHandle; //MFTEntry
+
+typedef struct {
+    char filename[MAX_NAME];
+    char ext[3];
+    uint8_t attributes;
+    uint16_t reserved;
+    uint16_t creation_time;
+    uint16_t creation_date;
+    uint16_t last_access_date;
+    uint16_t ignored;
+    uint16_t last_write_time;
+    uint16_t last_write_date;
+    uint16_t first_logical_cluster;   // 0 for root, 1 reserved, first data cluster is 2
+    uint32_t file_size; // 0 for directories
+} DirectoryEntry;
 
 int main(int argc, char *argv[]) {
  
@@ -55,11 +73,13 @@ int main(int argc, char *argv[]) {
 void initialize_disk_image(FILE *disk_image, int disk_size_mb) {
     initialize_fat(disk_image, disk_size_mb);
     initialize_mft(disk_image);
+    initialize_rootdir(); //init directoryEntry for rootdir
+    initialize_bootsector(); //init boot block and superblock
 }
 
 void initialize_fat(FILE *disk_image, int disk_size_mb) {
     // Calculate number of blocks based on disk size
-    int num_blocks = disk_size_mb * 1000;  // Assuming 1 block = 1 KB
+    int num_blocks = disk_size_mb * 1024;  // Assuming 1 block = 512 bytes
 
     // Allocate memory for FAT entries
     FATEntry *fat_entries = (FATEntry *)malloc(num_blocks * sizeof(FATEntry));
@@ -81,6 +101,7 @@ void initialize_fat(FILE *disk_image, int disk_size_mb) {
     }
 
     // Write FAT entries to disk image file
+    // Where should we write the FAT in the disk???
     fwrite(fat_entries, num_blocks * sizeof(FATEntry), num_blocks, disk_image);
 
     // Free allocated memory
@@ -96,6 +117,7 @@ void initialize_mft(FILE *disk_image) {
     root_directory_entry.attributes = DIR_ATTR;
 
     // Write MFT entries to disk image file
+    // Where should we write the MFT in the disk???
     fwrite(&root_directory_entry, sizeof(MFTEntry), 1, disk_image);
     
     // Write other MFT entries? (system files)
