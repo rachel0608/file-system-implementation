@@ -3,6 +3,9 @@ function main():
     if !file_exists("DISK"):
         print("File system disk image not found. Please run 'format' command to create one.")
         return
+
+    // Mount the file system from the "DISK" file
+    fs_mount("DISK")
     
     // Initialize users and their permissions
     initialize_users()
@@ -14,6 +17,38 @@ function main():
 function file_exists(filename):
     // Check if the given filename exists in the current directory
     return 1 if filename exists, 0 otherwise
+
+
+// Mount the file system from the specified disk image to the root directory
+int fs_mount(const char *disk_image) {
+   
+    FILE *disk = fopen(disk_image, "rb"); //using Linux's version for now
+    if (disk == NULL) {
+        perror("Failed to open disk image");
+        return -1;
+    }
+
+    // Read file system metadata from the disk image- how do we do this?
+    FileSystemMetadata metadata = read_file_system_metadata(disk);
+    if (metadata.type != FILE_SYSTEM_TYPE_FAT12) {
+        fprintf(stderr, "Unsupported file system type\n");
+        fclose(disk); //using Linux's version for now
+        return -1;
+    }
+
+    initialize_file_system_structures(metadata);
+
+    // Mount the file system at the root directory ("/")
+    mount_point = "/";
+    file_system_root = metadata.root_directory;
+
+    // Configure file system operations
+    file_system_operations.open = &fs_open;
+    file_system_operations.read = &fs_read;
+    // etc etc.
+
+    return 0; // Mounting successful
+}
 
 function initialize_users():
     // Create regular user and super user accounts
