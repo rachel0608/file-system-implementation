@@ -15,20 +15,34 @@ typedef struct {
     uint32_t total_sectors_big;     // Total number of sectors (if total_sectors is 0)
 } BootSector;
 
-
 typedef struct {
   char* filename; // Filename
   int file_desc; // File descriptor
   char* access; // File access type
   int position; // File position
-} FileHandle; // FileHandle loosely based on Unix systems’s FileHandle
+  int group_id;
+  int owner_id;
+} FileHandle; // FileHandle loosely based on Unix systems’s FileHandle (may not need?)
+
+typedef struct {
+    char* username;     // Username
+    char* password;     // Password
+    int user_id;        // User ID (super user = 0 or regular user)
+} User;
+
+typedef struct {
+    char* groupname;    // Group name
+    int group_id;       // Group ID
+    int* member_ids;    // Array of user IDs who are members of this group
+    int num_members;    // Number of members in the group
+} Group;
 
 // tEchNicaLLy filename = directory = path
 
-FileHandle* f_open(char* filename, char* access) // access = w/w+, r/r+, a/a+
+FileHandle* f_open(char* filename, char* access, User* user) // access = w/w+, r/r+, a/a+ maybe add group later as param
 int f_read(FileHandle file, void* buffer, size_t bytes);
 int f_write(FileHandle file, void* buffer, size_t bytes);
-void f_close(FileHandle file);
+void f_close(FileHandle file, User* user);
 int f_seek(FileHandle file, long offset, int whence);
 void f_rewind(FileHandle file);
 int f_stat(FileHandle file, struct stat *buffer);
