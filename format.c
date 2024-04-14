@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "filesystem.h"
 
 #define DISK_SIZE_MB_DEFAULT 1
 #define EXPECTED_ARGS 2
@@ -9,52 +10,6 @@
 #define FLAG_PRESENT 4
 #define FLAG_PARAM argv[3]
 #define MAX_NAME 8
-
-typedef struct {
-    uint32_t value;  // 12-bit value representing allocation status or block number
-} FATEntry;
-
-typedef struct {
-    // Define MFT entry structure for storing file metadata
-    uint8_t filename[MAX_NAME];   // File name
-    uint32_t file_size;           // File size in bytes
-    uint32_t file_descriptor;     // FD
-    uint16_t start_block;         // Starting datablock of file data
-    char* access;                 // File permissions
-    uint32_t position;            // File position
-} FileHandle; //MFTEntry
-
-typedef struct {
-    char filename[MAX_NAME];
-    char ext[3];
-    uint8_t attributes;
-    uint16_t reserved;
-    uint16_t creation_time;
-    uint16_t creation_date;
-    uint16_t last_access_date;
-    uint16_t ignored;
-    uint16_t last_write_time;
-    uint16_t last_write_date;
-    uint16_t first_logical_cluster;   // 0 for root, 1 reserved, first data cluster is 2
-    uint32_t file_size; // 0 for directories
-} DirectoryEntry;
-
-typedef struct {
-    uint8_t jmp_instruction[3];     // JMP instruction to boot code
-    char oem_name[8];               // OEM name and version
-    uint16_t bytes_per_sector;      // Bytes per sector (512)
-    uint8_t sectors_per_cluster;    // Sectors per cluster (powers of 2 from 1-128)
-    uint16_t reserved_sector_count; // Number of reserved sectors (1 for FAT-12)
-    uint8_t num_fats;               // Number of FATs (2: 1 origin + 1 copy)
-    uint16_t root_entry_count;      // Number of root directory entries 
-    uint16_t total_sectors;         // Total number of sectors 
-    uint8_t media_descriptor;       // Media descriptor
-    uint16_t sectors_per_fat;       // Sectors per FAT
-    uint16_t sectors_per_track;     // Sectors per track
-    uint16_t num_heads;             // Number of heads
-    uint32_t hidden_sectors;        // Number of hidden sectors before this partition
-    uint32_t total_sectors_big;     // Total number of sectors (if total_sectors is 0)
-} BootSector;
 
 int main(int argc, char *argv[]) {
  
