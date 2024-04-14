@@ -39,6 +39,23 @@ typedef struct {
     uint32_t file_size; // 0 for directories
 } DirectoryEntry;
 
+typedef struct {
+    uint8_t jmp_instruction[3];     // JMP instruction to boot code
+    char oem_name[8];               // OEM name and version
+    uint16_t bytes_per_sector;      // Bytes per sector (512)
+    uint8_t sectors_per_cluster;    // Sectors per cluster (powers of 2 from 1-128)
+    uint16_t reserved_sector_count; // Number of reserved sectors (1 for FAT-12)
+    uint8_t num_fats;               // Number of FATs (2: 1 origin + 1 copy)
+    uint16_t root_entry_count;      // Number of root directory entries 
+    uint16_t total_sectors;         // Total number of sectors 
+    uint8_t media_descriptor;       // Media descriptor
+    uint16_t sectors_per_fat;       // Sectors per FAT
+    uint16_t sectors_per_track;     // Sectors per track
+    uint16_t num_heads;             // Number of heads
+    uint32_t hidden_sectors;        // Number of hidden sectors before this partition
+    uint32_t total_sectors_big;     // Total number of sectors (if total_sectors is 0)
+} BootSector;
+
 int main(int argc, char *argv[]) {
  
     // Parse command-line arguments
@@ -55,11 +72,13 @@ int main(int argc, char *argv[]) {
     }
 
     // Open disk to format
-    FILE *disk_image = fopen(filename, "wb");
+    FILE *disk_image = fopen(filename, "wb"); 
     if (!disk_image) {
         perror("Failed to create disk image file");
         return EXIT_FAILURE;
     }
+
+    //determine/allocate appropriate size for disk image?
 
     // Initialize disk image with FAT and MFT structures
     initialize_disk_image(disk_image, disk_size_mb);
@@ -110,7 +129,7 @@ void initialize_fat(FILE *disk_image, int disk_size_mb) {
 
 void initialize_mft(FILE *disk_image) {
     // Initialize MFT entries (for system files and metadata)
-    MFTEntry root_directory_entry;
+    FileHandle root_directory_entry;
     strcpy(root_directory_entry.filename, "ROOT");
     root_directory_entry.file_size = 0; // Root directory size initially 0
     root_directory_entry.start_cluster = FIRST_BLOCK_ROOT_DIR;
@@ -118,7 +137,70 @@ void initialize_mft(FILE *disk_image) {
 
     // Write MFT entries to disk image file
     // Where should we write the MFT in the disk???
-    fwrite(&root_directory_entry, sizeof(MFTEntry), 1, disk_image);
+    fwrite(&root_directory_entry, sizeof(FileHandle), 1, disk_image);
     
     // Write other MFT entries? (system files)
+}
+
+void initialize_rootdir(FILE *disk_image) {
+    // Initialize the root directory entry
+    DirectoryEntry root_entry;
+    strcpy(root_entry.filename, ".");
+    strcpy(root_entry.ext, "");
+    root_entry.attributes = DIR_ATTR; // Assuming directory attribute
+    root_entry.creation_time = 0;     // Initialize creation time
+    root_entry.creation_date = 0;     // Initialize creation date
+    root_entry.last_access_date = 0;  // Initialize last access date
+    root_entry.ignored = 0;           // Reserved field
+    root_entry.last_write_time = 0;   // Initialize last write time
+    root_entry.last_write_date = 0;   // Initialize last write date
+    root_entry.first_logical_cluster = FIRST_BLOCK_ROOT_DIR; // First cluster of the root directory
+    root_entry.file_size = 0;         // Root directory size (0 for directories)
+
+    // Write the root directory entry to the disk image
+    fseek(disk_image, FIRST_BLOCK_ROOT_DIR * BLOCK_SIZE, SEEK_SET);
+    fwrite(&root_entry, sizeof(DirectoryEntry), 1, disk_image);
+}
+
+void initialize_bootsector(FILE *disk_image, int disk_size_mb) {
+    // Initialize the boot sector
+    BootSector boot_sector;
+    boot_sector.bytes_per_sector = BLOCK_SIZE; // Assuming block size (e.g., 512 bytes)
+    boot_sector.sectors_per_cluster = SECTORS_PER_CLUSTER; // Sectors per cluster
+    boot_sector.reserved_sector_count = RESERVED_SECTOR_COUNT; // Reserved sectors
+    boot_sector.fat_count = FAT_COUNT; // Number of FAT tables
+    boot_sector.root_dir_entry_count = ROOT_DIR_ENTRY_COUNT; // Number of root directory entries
+    boot_sector.total_sectors_16 = disk_size_mb * 1024; // Total number of sectors in the disk
+    boot_sector.media_type = MEDIA_TYPE; // Media type (e.g., fixed disk)
+    boot_sector.sectors_per_fat = SECTORS_PER_FAT; // Sectors per FAT
+    boot_sector.sectors_per_track = SECTORS_PER_TRACK; // Sectors per track
+    boot_sector.heads = HEADS; // Number of heads
+    boot_sector.hidden_sectors = HIDDEN_SECTORS; // Hidden sectors
+    boot_sector.total_sectors_32 = 0; // Total sectors for disks > 32 MB (0 for now)
+
+    // Write the boot sector to the disk image
+    fseek(disk_image, 0, SEEK_SET);
+    fwrite(&boot_sector, sizeof(BootSector), 1, disk_image);
+}
+
+void initialize_bootsector(FILE *disk_image, int disk_size_mb) {
+    BootSector boot_sector;
+
+    // Init boot sector structure
+    memset(&boot_sector, 0, sizeof(BootSector));
+    boot_sector.bytes_per_sector = 512;
+    boot_sector.sectors_per_cluster = 1;
+    boot_sector.reserved_sector_count = 1;
+    boot_sector.num_fats = 2;
+    boot_sector.root_entry_count = 512;
+    boot_sector.total_sectors = disk_size_mb * 1024 / boot_sector.bytes_per_sector;
+    boot_sector.media_descriptor = 0xF8;
+    boot_sector.sectors_per_fat = 9;  // Assuming 9 sectors per FAT for FAT-12
+    boot_sector.sectors_per_track = 18;
+    boot_sector.num_heads = 2;
+    boot_sector.total_sectors_big = 0; // Not used for FAT-12
+
+    // Write the boot sector structure at the beginning of the disk image file
+    fseek(disk_image, 0, SEEK_SET);
+    fwrite(&boot_sector, sizeof(BootSector), 1, disk_image);
 }
