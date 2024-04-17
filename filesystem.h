@@ -1,13 +1,7 @@
 typedef struct {
-    uint8_t jmp_instruction[3];     // JMP instruction to boot code
-    char oem_name[8];               // OEM name and version
     uint16_t bytes_per_sector;      // Bytes per sector (512)
     uint8_t sectors_per_cluster;    // Sectors per cluster (powers of 2 from 1-128)
-    uint16_t reserved_sector_count; // Number of reserved sectors (1 for FAT-12)
-    uint8_t num_fats;               // Number of FATs (2: 1 origin + 1 copy)
-    uint16_t root_entry_count;      // Number of root directory entries 
     uint16_t total_sectors;         // Total number of sectors 
-    uint8_t media_descriptor;       // Media descriptor
     uint16_t sectors_per_fat;       // Sectors per FAT
     uint16_t sectors_per_track;     // Sectors per track
     uint16_t num_heads;             // Number of heads
@@ -16,7 +10,7 @@ typedef struct {
 } BootSector;
 
 typedef struct {
-  char* filename; // Filename
+  char* abs_path; // Absolute path
   int file_desc; // File descriptor
   char* access; // File access type
   int position; // File position
