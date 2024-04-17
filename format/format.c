@@ -23,6 +23,7 @@ typedef struct {
     uint32_t file_size_blocks;  // file size in blocks (1MB = 2048 blocks)
     uint32_t freeblock_offset;  // offset of first freeblock location
     uint8_t FAT_offset;         // offset of first FAT block location
+    uint8_t FREEMAP_offset      // offset of first Free-Bitmap location
     uint8_t ROOTDIR_offset;     // offset of first ROOTDIR block location
     uint8_t DATA_offset;        // offset of first DATABLOCK location
 } superblock;
@@ -70,9 +71,10 @@ superblock initialize_superblock(disk_image, disk_size_mb) {
     sb.file_size_blocks = (disk_size_mb * 1024) / (BLOCKSIZE / 1024);
     sb.freeblock_offset = -1;
     sb.FAT_offset = SUPERSIZE;
-    sb.ROOTDIR_offset = FATSIZE + SUPERSIZE;
-    sb.DATA_offset = FATSIZE + ROOTSIZE + SUPERSIZE;
-
+    sb.FREEMAP_offset = SUPERSIZE + FATSIZE;
+    sb.ROOTDIR_offset = SUPERSIZE + FATSIZE + FREEMAPSIZE;
+    sb.DATA_offset = SUPERSIZE + FATSIZE + FREEMAPSIZE + ROOTSIZE
+        
     //seek to 0
     write_to_disk(disk_image, sb, sizeof(superblock));
     return sb;
