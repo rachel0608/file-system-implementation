@@ -1,3 +1,10 @@
+#ifndef FILESYSTEM_H
+#define FILESYSTEM_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "fat.h"
+
 typedef struct {
     uint16_t bytes_per_sector;      // Bytes per sector (512)
     uint8_t sectors_per_cluster;    // Sectors per cluster (powers of 2 from 1-128)
@@ -33,7 +40,7 @@ typedef struct {
 
 // tEchNicaLLy filename = directory = path
 
-FileHandle* f_open(char* filename, char* access, User* user) // access = w/w+, r/r+, a/a+ maybe add group later as param
+FileHandle* f_open(char* filename, char* access, User* user); // access = w/w+, r/r+, a/a+ maybe add group later as param
 int f_read(FileHandle file, void* buffer, size_t bytes);
 int f_write(FileHandle file, void* buffer, size_t bytes);
 void f_close(FileHandle file, User* user);
@@ -43,13 +50,15 @@ int f_stat(FileHandle file, struct stat *buffer);
 int f_remove(const char* filename);
 DirectoryEntry* f_opendir(char* directory);
 DirectoryEntry* f_readdir(char* directory);
-Int f_closedir(char* path);
+int f_closedir(char* path);
 int f_mkdir(char* path);
 int f_rmdir(char* path);
 
-f_mount(); // Extra credit
-f_umount(); // Extra credit
+// f_mount(); // Extra credit
+// f_umount(); // Extra credit
 
 // Pointers to heads of free lists
 DirectoryEntry* freeHeadDE = NULL;
 FatEntry* freeHeadFE = NULL;
+
+#endif
