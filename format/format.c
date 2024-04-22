@@ -20,8 +20,10 @@
 #define CEIL_ROUNDING 1
 #define KB_IN_MB 1024.0
 #define FREEBLOCK 65535
-#define END_OF_CHAIN 65535
+#define EOF 0
+#define ROOTDIR 0
 #define BITS_PER_BLOCK (BLOCKSIZE * 8)
+#define DIR_SIZE_CAP 16
 
 
 typedef struct {
@@ -42,6 +44,25 @@ typedef struct {
     uint8_t bitmap[BLOCKSIZE]; // Bitmap to track free data blocks
 } BitmapBlock;
 
+typedef struct {
+    char filename[9];
+    char ext[3];
+    uint16_t attributes;
+    uint16_t reserved;
+    uint16_t creation_time;
+    uint16_t creation_date;
+    uint16_t last_access_date;
+    uint16_t ignored;
+    uint16_t last_write_time;
+    uint16_t last_write_date;
+    uint16_t first_block;
+    uint16_t file_size; // 0 for directories
+} DirectoryEntry; //32 bytes
+
+typedef struct {
+    DirectoryEntry entries[DIR_SIZE_CAP];
+} Directory; //holds 16 DirectoryEntrys
+
 superblock initialize_superblock(FILE *disk_image, int disk_size_mb); //calculate DS sizes and init & write superblock
 void test_sb(superblock sb);
 void test_readsb(FILE *disk_image);
@@ -51,6 +72,7 @@ void test_fat_end_of_chain(FILE *disk_image, superblock sb);
 void test_cluster_allocation(FILE *disk_image, superblock sb);
 void initialize_bitmap(FILE *disk_image, superblock sb);
 void test_bitmap(FILE *disk_image, superblock sb);
+void initialize_rootdir(FILE *disk_image, superblock sb);
 
 int main(int argc, char *argv[]) {
 
@@ -73,6 +95,7 @@ int main(int argc, char *argv[]) {
     superblock sb = initialize_superblock(disk_image, disk_size_mb);
     initialize_fat(disk_image, sb);
     initialize_bitmap(disk_image, sb);
+    initialize_rootdir(disk_image, sb);
 
     fclose(disk_image);
 
@@ -122,6 +145,7 @@ void initialize_fat(FILE *disk_image, superblock sb) {
     for (int i = 0; i < num_blocks; i++) {
         fat_table[i].block_number = FREEBLOCK;
     }
+    fat_table[ROOTDIR].block_number = EOF; //first block is reserved for the root dir
 
     // Write FAT to disk
     fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
@@ -132,10 +156,12 @@ void initialize_fat(FILE *disk_image, superblock sb) {
 }
 
 void initialize_bitmap(FILE *disk_image, superblock sb) {
+
     BitmapBlock bitmap_block;
 
-    // Initialize the bitmap block with all bits set to 1 (indicating free)
+    // Initialize the bitmap block with all bits set to 1 (indicating free) except first reserved block
     memset(bitmap_block.bitmap, 0xFF, BLOCKSIZE);
+    bitmap_block.bitmap[ROOTDIR / 8] &= ~(1 << (ROOTDIR % 8)); //set root dir block (first) to used
 
     // Write the bitmap block to the disk image
     fseek(disk_image, (BLOCKSIZE * sb.FREEMAP_offset), SEEK_SET); // Move to the position after the boot sector
@@ -146,6 +172,25 @@ void initialize_bitmap(FILE *disk_image, superblock sb) {
         bitmap_block.bitmap[i / 8] &= ~(1 << (i % 8)); // Set corresponding bit to 0 (used)
     }
     */
+}
+
+void initialize_rootdir(FILE *disk_image, superblock sb) {
+    //the root dir block will be a normal dirEntry that points to the first datablock, reserved for rootdir contents
+
+    DirectoryEntry root_dir_entry;
+    strcpy(root_dir_entry.filename, "ROOTDIR");
+    root_dir_entry.first_block = ROOTDIR; //points to first datablock-> holds directory for root level
+    root_dir_entry.file_size = ROOTDIR;
+    fseek(disk_image, (BLOCKSIZE * sb.ROOTDIR_offset), SEEK_SET);
+    fwrite(&root_dir_entry, sizeof(DirectoryEntry), 1, disk_image);
+
+    //DirectoryEntrys are 32 bytes each -> can fit 16 entrys in each directory block
+    Directory root_dir;
+    fseek(disk_image, (BLOCKSIZE * (sb.DATA_offset + ROOTDIR)), SEEK_SET); // Move to first block in data section
+    fwrite(&root_dir, sizeof(Directory), 1, disk_image);
+    
+    printf("Size of entry: %ld, size of directory: %ld\n", sizeof(DirectoryEntry), sizeof(Directory));
+
 }
 
 void test_sb(superblock sb) {
@@ -193,7 +238,7 @@ void test_fat_end_of_chain(FILE *disk_image, superblock sb) {
     int start_cluster = 2000;
     int current_cluster = start_cluster;
 
-    while (fat_entries[current_cluster].block_number != END_OF_CHAIN) {
+    while (fat_entries[current_cluster].block_number != EOF) {
         current_cluster = fat_entries[current_cluster].block_number;
         printf("Next cluster in chain: %d\n", current_cluster);
     }
@@ -222,7 +267,7 @@ void test_cluster_allocation(FILE *disk_image, superblock sb) {
     // Allocate clusters for a new file (chain them in FAT)
     while (current_cluster < sb.file_size_blocks) {
         if (fat_entries[current_cluster].block_number == FREEBLOCK) {
-            fat_entries[current_cluster].block_number = END_OF_CHAIN;
+            fat_entries[current_cluster].block_number = EOF;
             break;
         }
         current_cluster++;
