@@ -189,8 +189,6 @@ void initialize_rootdir(FILE *disk_image, superblock sb) {
     fseek(disk_image, (BLOCKSIZE * (sb.DATA_offset + ROOTDIR)), SEEK_SET); // Move to first block in data section
     fwrite(&root_dir, sizeof(Directory), 1, disk_image);
     
-    printf("Size of entry: %ld, size of directory: %ld\n", sizeof(DirectoryEntry), sizeof(Directory));
-
 }
 
 void test_sb(superblock sb) {
