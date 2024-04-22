@@ -102,6 +102,8 @@ int main(int argc, char *argv[]) {
     //Open to read
     disk_image = fopen(filename, "rb"); //write to size disk_size_mb
 
+    //call test functions here
+        
     fclose(disk_image);
     
     printf("Disk image formatted successfully: %s\n", filename);
