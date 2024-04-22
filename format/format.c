@@ -102,8 +102,6 @@ int main(int argc, char *argv[]) {
     //Open to read
     disk_image = fopen(filename, "rb"); //write to size disk_size_mb
 
-    //call test functions here
-        
     fclose(disk_image);
     
     printf("Disk image formatted successfully: %s\n", filename);
@@ -119,7 +117,7 @@ superblock initialize_superblock(FILE *disk_image, int disk_size_mb) {
     sb.file_size_blocks = (disk_size_mb * KB_IN_MB) / (BLOCKSIZE / KB_IN_MB);
     int fatsize = (sb.file_size_blocks * BYTES_PER_ENTRY + BLOCKSIZE - CEIL_ROUNDING)/BLOCKSIZE; //FAT16 entries are 2 bytes each * num blocks, ceil
     int freemap_size = (sb.file_size_blocks + FREEMAP_SLOTS - CEIL_ROUNDING)/FREEMAP_SLOTS; //1 bitmap block per 4096 freeblocks, ceil divide
-    int rootsize = 1; //1 for now, how to calculate?
+    int rootsize = 1;
     sb.FAT_offset = SUPERSIZE;
     sb.FREEMAP_offset = SUPERSIZE + fatsize;
     sb.ROOTDIR_offset = SUPERSIZE + fatsize + freemap_size;
@@ -184,12 +182,12 @@ void initialize_rootdir(FILE *disk_image, superblock sb) {
     root_dir_entry.first_block = ROOTDIR; //points to first datablock-> holds directory for root level
     root_dir_entry.file_size = ROOTDIR;
     fseek(disk_image, (BLOCKSIZE * sb.ROOTDIR_offset), SEEK_SET);
-    fwrite(&root_dir_entry, sizeof(DirectoryEntry), 1, disk_image);
+    fwrite(&root_dir_entry, sizeof(DirectoryEntry), 1, disk_image); //Directory Entry is size: 32 bytes
 
     //DirectoryEntrys are 32 bytes each -> can fit 16 entrys in each directory block
     Directory root_dir;
     fseek(disk_image, (BLOCKSIZE * (sb.DATA_offset + ROOTDIR)), SEEK_SET); // Move to first block in data section
-    fwrite(&root_dir, sizeof(Directory), 1, disk_image);
+    fwrite(&root_dir, sizeof(Directory), 1, disk_image); //Directory is size: 512 bytes
     
 }
 
