@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 //#include "filesystem.h" //structs: BootSector, FileHandle (OFTEntry), User, Group
 //#include "fat.h" //structs: DirectoryEntry, FATEntry
 
@@ -14,21 +15,42 @@
 #define MAX_NAME 8
 #define BLOCKSIZE 512
 #define SUPERSIZE 1
-#define FATSIZE 8
-#define ROOTSIZE 1
+#define FREEMAP_SLOTS 4096
+#define BYTES_PER_ENTRY 2
+#define CEIL_ROUNDING 1
+#define KB_IN_MB 1024.0
+#define FREEBLOCK 65535
+#define END_OF_CHAIN 65535
+#define BITS_PER_BLOCK (BLOCKSIZE * 8)
+
 
 typedef struct {
-    uint16_t block_size;        // block size will be standard 512 bytes
     uint8_t file_size_mb;       // file size in MB (default is 1MB)
-    uint32_t file_size_blocks;  // file size in blocks (1MB = 2048 blocks)
-    uint32_t freeblock_offset;  // offset of first freeblock location
     uint8_t FAT_offset;         // offset of first FAT block location
-    uint8_t FREEMAP_offset      // offset of first Free-Bitmap location
+    uint8_t FREEMAP_offset;      // offset of first Free-Bitmap location
     uint8_t ROOTDIR_offset;     // offset of first ROOTDIR block location
     uint8_t DATA_offset;        // offset of first DATABLOCK location
+    uint16_t block_size;        // block size will be standard 512 bytes
+    uint32_t file_size_blocks;  // file size in blocks (1MB = 2048 blocks)
 } superblock;
 
-superblock initialize_superblock(disk_image, disk_size_mb);
+typedef struct {
+    uint16_t block_number;  // 16-bit value (2 bytes) representing block number (after DATA_offset)
+} FATEntry;
+
+typedef struct {
+    uint8_t bitmap[BLOCKSIZE]; // Bitmap to track free data blocks
+} BitmapBlock;
+
+superblock initialize_superblock(FILE *disk_image, int disk_size_mb); //calculate DS sizes and init & write superblock
+void test_sb(superblock sb);
+void test_readsb(FILE *disk_image);
+void initialize_fat(FILE *disk_image, superblock sb);
+void test_readfat(FILE *disk_image, superblock sb);
+void test_fat_end_of_chain(FILE *disk_image, superblock sb);
+void test_cluster_allocation(FILE *disk_image, superblock sb);
+void initialize_bitmap(FILE *disk_image, superblock sb);
+void test_bitmap(FILE *disk_image, superblock sb);
 
 int main(int argc, char *argv[]) {
 
@@ -45,54 +67,199 @@ int main(int argc, char *argv[]) {
         disk_size_mb = atoi(FLAG_PARAM);
     }
 
-    // Open disk
-    FILE *disk_image = fopen(filename, "wb"); //if exists will open existing, otw will create new
-
-    //if disk existed, modify structure
-    //if disk was created, write to size disk_size_mb
-
-    //question: how do you deal with a disk that already exists? It will not have consistent format
-
-    // Initialize disk image with Superblock, FAT, RootDirEntry
+    // Open to write- initialize disk image with Superblock, FAT, Bitmap, RootDirEntry
+    FILE *disk_image = fopen(filename, "wb"); //write to size disk_size_mb
+    
     superblock sb = initialize_superblock(disk_image, disk_size_mb);
-    test_sb(sb);
-    test_readsb(disk_image);
+    initialize_fat(disk_image, sb);
+    initialize_bitmap(disk_image, sb);
 
     fclose(disk_image);
+
+    //Open to read
+    disk_image = fopen(filename, "rb"); //write to size disk_size_mb
+
+    fclose(disk_image);
+    
     printf("Disk image formatted successfully: %s\n", filename);
     return EXIT_SUCCESS;
 }
 
-superblock initialize_superblock(disk_image, disk_size_mb) {
+//calculate DS sizes and init & write superblock
+superblock initialize_superblock(FILE *disk_image, int disk_size_mb) {
 
     superblock sb;
     sb.block_size = BLOCKSIZE;
     sb.file_size_mb = disk_size_mb;
-    sb.file_size_blocks = (disk_size_mb * 1024) / (BLOCKSIZE / 1024);
-    sb.freeblock_offset = -1;
+    sb.file_size_blocks = (disk_size_mb * KB_IN_MB) / (BLOCKSIZE / KB_IN_MB);
+    int fatsize = (sb.file_size_blocks * BYTES_PER_ENTRY + BLOCKSIZE - CEIL_ROUNDING)/BLOCKSIZE; //FAT16 entries are 2 bytes each * num blocks, ceil
+    int freemap_size = (sb.file_size_blocks + FREEMAP_SLOTS - CEIL_ROUNDING)/FREEMAP_SLOTS; //1 bitmap block per 4096 freeblocks, ceil divide
+    int rootsize = 1; //1 for now, how to calculate?
     sb.FAT_offset = SUPERSIZE;
-    sb.FREEMAP_offset = SUPERSIZE + FATSIZE;
-    sb.ROOTDIR_offset = SUPERSIZE + FATSIZE + FREEMAPSIZE;
-    sb.DATA_offset = SUPERSIZE + FATSIZE + FREEMAPSIZE + ROOTSIZE
+    sb.FREEMAP_offset = SUPERSIZE + fatsize;
+    sb.ROOTDIR_offset = SUPERSIZE + fatsize + freemap_size;
+    sb.DATA_offset = SUPERSIZE + fatsize + freemap_size + rootsize;
         
-    //seek to 0
-    write_to_disk(disk_image, sb, sizeof(superblock));
+    //long int current_position = ftell(disk_image);
+    //printf("FP: %ld\n", current_position);
+
+    fseek(disk_image, 0, SEEK_SET);
+    fwrite(&sb, sizeof(superblock), 1, disk_image);
+    
     return sb;
+
+}
+
+void initialize_fat(FILE *disk_image, superblock sb) {
+
+    //each block of FAT has 256 entries
+    int num_entries_per_block = BLOCKSIZE/BYTES_PER_ENTRY;
+    int num_blocks = sb.file_size_blocks;
+
+    // Allocate memory & initialize all FAT entries as free
+    FATEntry *fat_table = (FATEntry *)malloc(num_blocks * sizeof(FATEntry));
+
+    for (int i = 0; i < num_blocks; i++) {
+        fat_table[i].block_number = FREEBLOCK;
+    }
+
+    // Write FAT to disk
+    fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
+    fwrite(fat_table, (num_blocks * sizeof(FATEntry)), 1, disk_image);
+
+    free(fat_table);
+
+}
+
+void initialize_bitmap(FILE *disk_image, superblock sb) {
+    BitmapBlock bitmap_block;
+
+    // Initialize the bitmap block with all bits set to 1 (indicating free)
+    memset(bitmap_block.bitmap, 0xFF, BLOCKSIZE);
+
+    // Write the bitmap block to the disk image
+    fseek(disk_image, (BLOCKSIZE * sb.FREEMAP_offset), SEEK_SET); // Move to the position after the boot sector
+    fwrite(&bitmap_block, sizeof(BitmapBlock), 1, disk_image);
+
+    /* How to set first 10 blocks as used:
+    for (int i = 0; i < 10; i++) {
+        bitmap_block.bitmap[i / 8] &= ~(1 << (i % 8)); // Set corresponding bit to 0 (used)
+    }
+    */
 }
 
 void test_sb(superblock sb) {
     printf("Block Size = %d\n", sb.block_size);
     printf("File Size in MB = %d\n", sb.file_size_mb);
     printf("File Size in Blocks = %d\n", sb.file_size_blocks);
-    printf("Freeblock Offset = %d\n", sb.freeblock_offset);
     printf("FAT Offset = %d\n", sb.FAT_offset);
+    printf("FREEMAP Offset = %d\n", sb.FREEMAP_offset);
     printf("ROOTDIR Offset = %d\n", sb.ROOTDIR_offset);
-    printf("DATA Offset = %d\n", sb.DATA_offset);
+    printf("DATA Offset = %d\n\n", sb.DATA_offset);
+}
 
+void test_readsb(FILE *disk_image) {
+
+    superblock sb;
+    fseek(disk_image, 0, SEEK_SET);
+    fread(&sb, sizeof(superblock), 1, disk_image);
+    test_sb(sb);
 
 }
 
-void test_readsb(FILE* disk_image) {
+void test_readfat(FILE *disk_image, superblock sb) {
+
+    FATEntry fat_entries[sb.file_size_blocks];
+
+    // Read FAT entries from disk
+    fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
+    fread(fat_entries, sb.file_size_blocks * sizeof(FATEntry), 1, disk_image);
+
+    for (int i = 0; i < sb.file_size_blocks; i++) {
+        printf("fat cell %d: %d\n", i, fat_entries[i].block_number);
+    }
 
 }
 
+void test_fat_end_of_chain(FILE *disk_image, superblock sb) {
+
+    FATEntry fat_entries[sb.file_size_blocks];
+
+    // Read FAT entries from disk
+    fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
+    fread(fat_entries, sb.file_size_blocks * sizeof(FATEntry), 1, disk_image);
+
+    // Simulate file allocation (chain of clusters)
+    int start_cluster = 2000;
+    int current_cluster = start_cluster;
+
+    while (fat_entries[current_cluster].block_number != END_OF_CHAIN) {
+        current_cluster = fat_entries[current_cluster].block_number;
+        printf("Next cluster in chain: %d\n", current_cluster);
+    }
+
+    // read back and verify FAT entries for the file's clusters
+    test_readfat(disk_image, sb);
+    
+    // Verify that last cluster in chain points to end of chain
+    printf("Last cluster in chain: %d\n", current_cluster);
+
+}
+
+void test_cluster_allocation(FILE *disk_image, superblock sb) {
+    // Assuming you have initialized FATEntry array and disk_image file pointer
+
+    FATEntry fat_entries[sb.file_size_blocks];
+
+    // Read FAT entries from disk
+    fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
+    fread(fat_entries, (sb.file_size_blocks * sizeof(FATEntry)), 1, disk_image);
+
+    // Simulate file allocation (chain of clusters)
+    int start_cluster = 2000;
+    int current_cluster = start_cluster;
+
+    // Allocate clusters for a new file (chain them in FAT)
+    while (current_cluster < sb.file_size_blocks) {
+        if (fat_entries[current_cluster].block_number == FREEBLOCK) {
+            fat_entries[current_cluster].block_number = END_OF_CHAIN;
+            break;
+        }
+        current_cluster++;
+    }
+
+    // Write updated FAT entries back to disk
+    //fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
+    //fwrite(fat_entries, (sb.file_size_blocks * sizeof(FATEntry)), 1, disk_image);
+
+    // read back and verify FAT entries for the allocated clusters
+    test_readfat(disk_image, sb);
+}
+
+//tests bitmap with first 10 blocks used
+void test_bitmap(FILE *disk_image, superblock sb) {
+    BitmapBlock bitmap_block;
+
+    // Read the bitmap block from the disk image
+    fseek(disk_image, BLOCKSIZE * sb.FREEMAP_offset, SEEK_SET); // Move to the position after the boot sector
+    fread(&bitmap_block, sizeof(BitmapBlock), 1, disk_image);
+
+    // Validate the bitmap contents
+    int num_used_blocks = 0;
+    for (int i = 0; i < sb.file_size_blocks; i++) {
+        int byte_index = i / 8;
+        int bit_index = i % 8;
+        int is_used = !(bitmap_block.bitmap[byte_index] & (1 << bit_index));
+
+        if (is_used) {
+            printf("Block %d is used\n", i);
+            num_used_blocks++;
+        }
+    }
+
+    if (num_used_blocks == 10) {
+        printf("Bitmap initialization test passed: Expected 10 used blocks\n");
+    } else {
+        printf("Bitmap initialization test failed: Expected 10 used blocks, found %d\n", num_used_blocks);
+    }
+}
