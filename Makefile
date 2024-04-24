@@ -1,11 +1,11 @@
 CC = gcc
-CFLAGS = -Wall -Wextra
-LIBS = -lreadline -lpthread
+CFLAGS = -Wall -Wextra -g
+LDFLAGS = -lreadline
 
-all: mysh 
+all: shell
 
-mysh: mysh.c
-	$(CC) $(CFLAGS) $^ -o $@ $(LIBS)
+shell: shell.c
+    $(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:
-	rm -f mysh
+   rm -f shell *.o
