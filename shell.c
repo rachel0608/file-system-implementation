@@ -308,9 +308,7 @@ int main() {
         perror("sigaction");
         exit(EXIT_FAILURE);
     }
-    
-    // main loop
-
+  
     while (1) {
         // reset or empty input each time
         if (input){
