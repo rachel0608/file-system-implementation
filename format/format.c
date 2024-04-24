@@ -178,7 +178,7 @@ void initialize_rootdir(FILE *disk_image, superblock sb) {
     //the root dir block will be a normal dirEntry that points to the first datablock, reserved for rootdir contents
 
     DirectoryEntry root_dir_entry;
-    strcpy(root_dir_entry.filename, "ROOTDIR");
+    strcpy(root_dir_entry.filename, "/"); //filename of root directory entry should be "/"
     root_dir_entry.first_block = ROOTDIR; //points to first datablock-> holds directory for root level
     root_dir_entry.file_size = ROOTDIR;
     fseek(disk_image, (BLOCKSIZE * sb.ROOTDIR_offset), SEEK_SET);
