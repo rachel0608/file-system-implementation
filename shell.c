@@ -243,6 +243,8 @@ int main() {
         perror("sigaction");
         exit(EXIT_FAILURE);
     }
+
+    fs_mount(); //read from disk to init all structs
   
     while (1) {
         // reset or empty input each time
