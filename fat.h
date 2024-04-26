@@ -1,22 +1,23 @@
+#ifndef FAT_H
+#define FAT_H
+
+#define BLOCK_SIZE 512
+
 // Root directory is also a directory entry
 typedef struct {
     char filename[8];
     char ext[3];
-    uint8_t attributes;
-    uint16_t reserved;
-    uint16_t creation_time;
-    uint16_t creation_date;
-    uint16_t last_access_date;
-    uint16_t ignored;
-    uint16_t last_write_time;
-    uint16_t last_write_date;
-    uint16_t first_logical_cluster;   // 0 for root, 1 reserved, first data cluster is 2
-    uint32_t file_size; // 0 for directories
-} DirectoryEntry;
+    uint16_t first_logical_cluster;
+    uint32_t file_size;
+} DirectoryEntry; // 20 bytes
 
 typedef struct {
-    uint32_t content;
-} FatEntry;
+    uint16_t block_number;
+} FATEntry;
+
+typedef struct {
+    uint8_t bitmap[BLOCK_SIZE];
+} BitmapBlock;
 
 // find the directory entry for a file 
 DirectoryEntry* find_file(char* filename);
@@ -32,3 +33,5 @@ void fat_update_directory_entry(const char* filename, FatEntry *start_cluster, u
 
 // free clusters allocated to a file
 void fat_free_cluster_chain(FatEntry *start_cluster);
+
+#endif
