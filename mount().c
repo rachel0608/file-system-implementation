@@ -1,3 +1,13 @@
+#define _POSIX_SOURCE 199309L
+#define _XOPEN_SOURCE 700
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#define BLOCKSIZE 512
+
+// for shell command implementation, see folder: shell_commands
+
 typedef struct {
     uint8_t file_size_mb;       // file size in MB (default is 1MB)
     uint8_t FAT_offset;         // offset of first FAT block location
@@ -39,6 +49,26 @@ typedef struct {
     char value[BLOCKSIZE];
 } datablock; //holds a block of data
 
+void fs_mount(char *diskname);
+
+superblock sb;
+FATEntry *fat;
+BitmapBlock bitmap;
+DirectoryEntry root_dir_entry;
+datablock *data_section;
+
+int main() {
+
+
+    fs_mount("DISK");
+
+  
+    //main loop
+    
+    return 0;
+}
+
+
 //to be called before the mainloop
 void fs_mount(char *diskname) {
 
@@ -46,7 +76,6 @@ void fs_mount(char *diskname) {
     printf("file opened\n");
 
     //extern superblock, FAT, bitmap, rootdir, data_section globals declared in header, defined in this func
-    superblock sb;
 
     //read + define superblock
     fseek(disk, 0, SEEK_SET);
@@ -62,7 +91,7 @@ void fs_mount(char *diskname) {
     printf("DATA Offset = %d\n\n", sb.DATA_offset);
 
     int num_blocks = sb.file_size_blocks;
-    FATEntry fat[num_blocks];
+    fat = (FATEntry *)malloc(num_blocks * sizeof(FATEntry));
 
     //read + define FAT
     fseek(disk, BLOCKSIZE * sb.FAT_offset, SEEK_SET);
@@ -74,15 +103,11 @@ void fs_mount(char *diskname) {
         //printf("fat cell %d: %d\n", i, fat[i].block_number); 
     }
 
-    BitmapBlock bitmap;
-
     //read + define bitmap
     fseek(disk, BLOCKSIZE * sb.FREEMAP_offset, SEEK_SET);
     fread(&bitmap, sizeof(BitmapBlock), 1, disk);
     printf("-----------------------------------------------------------------");
     printf("\nbitmap read and defined: check cecilia's bitmap code for util\n");
-
-    DirectoryEntry root_dir_entry;
 
     //read + define rootdirentry
     fseek(disk, BLOCKSIZE * sb.ROOTDIR_offset, SEEK_SET);
@@ -114,7 +139,7 @@ void fs_mount(char *diskname) {
     printf("first block: %d\n", root_dir_entry.first_block);
     printf("file size: %d\n", root_dir_entry.file_size);
 
-    datablock data_section[sb.file_size_blocks];
+    data_section = (datablock *)malloc(num_blocks * sizeof(data_section));
 
     //read + define datablock section
     fseek(disk, BLOCKSIZE * sb.DATA_offset, SEEK_SET); // Move to first block in data section
