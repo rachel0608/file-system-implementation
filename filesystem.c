@@ -54,6 +54,7 @@ DirectoryEntry* f_opendir(char* directory) {
 	// look into FAT[0], find a DirectoryEntry with the same filename
 	int bytes_count = 0;
 	DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+	
 	while (bytes_count < BLOCK_SIZE) {
 		// retrieve the first 20 bytes of FAT[0]
 		memcpy(sub_dir, &FAT[0] + bytes_count, sizeof(DirectoryEntry));
@@ -72,6 +73,33 @@ DirectoryEntry* f_opendir(char* directory) {
 
 	return NULL;
 }
+
+// DirectoryEntry* f_opendir(char *directory) { // maybe make directory const char * since it shouldn't change?
+//     int total_entries = num_dir_per_block; // get the number of directory entries total in FAT
+
+// 	// using the FAT, read through all the entries
+//     for (int i = 0; i < total_entries; i++) {
+//         DirectoryEntry* dir_entry = &FAT[i];
+
+// 		// checking if the dir_entry matches the directory name
+//         if (strcmp(dir_entry->filename, directory) == 0) {
+//             // return a copy of the DirectoryEntry
+//             DirectoryEntry* dir_open = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+
+//             if (dir_open == NULL) {
+//                 printf("ERROR: Memory allocation failed.\n");
+//                 return NULL;
+//             }
+
+//             memcpy(dir_open, dir_entry, sizeof(DirectoryEntry));
+//             return dir_open;
+//         }
+//     }
+
+//     // directory not found in the FAT
+//     printf("ERROR: Directory "%s" could not be found.\n", directory);
+//     return NULL;
+// }
 
 // Open a file, return a FileHandle 
 // My attempt to open file1.txt 
