@@ -30,7 +30,8 @@ bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
     // Combine filename and extension for comparison
     char full_filename[11];
     strncpy(full_filename, dir_entry->filename, 8);
-    strncat(full_filename, ".", 1);
+    // strncat(full_filename, ".", 1);
+	strcat(full_filename, ".");
     strncat(full_filename, dir_entry->ext, 3);
 	printf("full_filename: %s\n", full_filename);
 
@@ -57,7 +58,7 @@ DirectoryEntry* f_opendir(char* directory) {
 	
 	while (bytes_count < BLOCK_SIZE) {
 		// retrieve the first 20 bytes of FAT[0]
-		memcpy(sub_dir, &FAT[0] + bytes_count, sizeof(DirectoryEntry));
+		memcpy(sub_dir, &data_section[0] + bytes_count, sizeof(DirectoryEntry));
 		print_subdir(sub_dir);
 
 		// check if the filename matches
@@ -99,6 +100,55 @@ DirectoryEntry* f_opendir(char* directory) {
 //     // directory not found in the FAT
 //     printf("ERROR: Directory "%s" could not be found.\n", directory);
 //     return NULL;
+// }
+
+// DirectoryEntry* f_readdir(FileHandle fh) {
+//     DirectoryEntry* file = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+    
+// 	if (file == NULL) {
+//         printf("ERROR: Memory allocation for directory entry failed.\n");
+//         return NULL;
+//     }
+
+//     // check if file descriptor is valid
+//     if (fh->file_desc < 0) {
+//         printf("ERROR: Invalid file descriptor.\n");
+//         return NULL;
+//     }
+
+//     // Check if directory offset is beyond the directory size
+//     if (open_files[fd].offset >= cur_disk->sb.size) {
+//         printf("ERROR: End of the directory reached.\n");
+//         return NULL;
+//     }
+
+//     // Check read permission for the directory
+//     if (!(cur_disk->inodes[open_files[fd].node].permission & PERMISSION_R)) {
+//         printf("ERROR: Cannot read directory, do not have permission.\n");
+//         return NULL;
+//     }
+
+//     // Calculate block number and offset within the block
+//     int FILE_ENTRY_N = BLOCK_SIZE / FILE_ENTRY_SIZE;
+//     int block_num = open_files[fd].offset / FILE_ENTRY_N;
+//     int block_rmd = open_files[fd].offset % FILE_ENTRY_N;
+
+//     // Load the target block from the FAT (simulate loading block)
+//     struct data_block target_block = load_block(open_files[fd].node, block_num);
+
+//     // Parse the directory entry from the loaded block
+//     subfile->node = *((int*)(target_block.data + block_rmd * FILE_ENTRY_SIZE));
+//     memcpy(subfile->file_name, target_block.data + block_rmd * FILE_ENTRY_SIZE + sizeof(int),
+//            MAX_FILENAME_LENGTH);
+//     subfile->file_name[MAX_FILENAME_LENGTH] = '\0'; // Ensure null-termination for the filename
+
+//     // Free the loaded block data (simulated here)
+//     free(target_block.data);
+
+//     // Increment directory offset for the next read operation
+//     open_files[fd].offset++;
+
+//     return subfile;
 // }
 
 // Open a file, return a FileHandle 
@@ -214,7 +264,8 @@ int main(void) {
 	// Mount the filesystem
 	fs_mount("fake_disk.img");
 
-	read_dir("fake_disk.img");
+	// read_dir("fake_disk.img");
+	f_opendir("fake_disk.img");
 	
 	// Open a file
 	FileHandle* file = f_open("/file1.txt", "r");
