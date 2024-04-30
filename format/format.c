@@ -63,6 +63,10 @@ typedef struct {
     DirectoryEntry entries[DIR_SIZE_CAP];
 } Directory; //holds 16 DirectoryEntrys
 
+typedef struct {
+    char buffer[BLOCKSIZE]; //either Directory or File
+} datablock; //holds a block of data
+
 superblock initialize_superblock(FILE *disk_image, int disk_size_mb); //calculate DS sizes and init & write superblock
 void test_sb(superblock sb);
 void test_readsb(FILE *disk_image);
@@ -186,8 +190,14 @@ void initialize_rootdir(FILE *disk_image, superblock sb) {
 
     //DirectoryEntrys are 32 bytes each -> can fit 16 entrys in each directory block
     Directory root_dir;
+    DirectoryEntry curr_dir_entry;
+    strcpy(curr_dir_entry.filename, "."); // Filename of current directory entry should be "."
+    curr_dir_entry.first_block = ROOTDIR;      // Points to first data block
+    curr_dir_entry.file_size = ROOTDIR;        // Dirs set to size 0
+    root_dir.entries[ROOTDIR] = curr_dir_entry; // Assuming the root directory is at index 0
+
     fseek(disk_image, (BLOCKSIZE * (sb.DATA_offset + ROOTDIR)), SEEK_SET); // Move to first block in data section
-    fwrite(&root_dir, sizeof(Directory), 1, disk_image); //Directory is size: 512 bytes
+    fwrite(&root_dir, sizeof(Directory), 1, disk_image); //Directory will take up the first reserved block
     
 }
 
