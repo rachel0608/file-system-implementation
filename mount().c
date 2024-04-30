@@ -46,7 +46,7 @@ typedef struct {
 } Directory; //holds 16 DirectoryEntrys
 
 typedef struct {
-    char value[BLOCKSIZE];
+    char buffer[BLOCKSIZE];
 } datablock; //holds a block of data
 
 void fs_mount(char *diskname);
@@ -143,9 +143,15 @@ void fs_mount(char *diskname) {
 
     //read + define datablock section
     fseek(disk, BLOCKSIZE * sb.DATA_offset, SEEK_SET); // Move to first block in data section
-    fread(data_section, BLOCKSIZE * sb.file_size_blocks, 1, disk); //Directory is size: 512 bytes
-    printf("--------------------------------------------------");
-    printf("\ndata section read and defined: currently empty\n");
+    fread(data_section, BLOCKSIZE, sb.file_size_blocks, disk);
+    printf("--------------------------------");
+    printf("\ndata section read and defined:\n");
+    Directory *root_dir = (Directory *) data_section[0].buffer;
+
+    // Access the first block in the data section to verify the copy
+    printf("Root dir's first entry filename: %s\n", root_dir->entries[0].filename);
+    printf("Root dir's first entry file size: %d\n", root_dir->entries[0].file_size);
+    printf("Root dir's first entry first block: %d\n", root_dir->entries[0].first_block);
 
     fclose(disk);
 }
