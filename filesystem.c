@@ -8,12 +8,13 @@
 #include "fat.h"
 
 #define FAT_ENTRY_COUNT 4096
+#define ROOT_DATABLOCK 11
 
 superblock sb;
 FATEntry FAT[FAT_ENTRY_COUNT];
 BitmapBlock bitmap;
 DirectoryEntry root_dir_entry;
-char data_section[2097152]; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
+char root_data[BLOCK_SIZE]; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
 int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 25 entries per block
 
 // helper function to check access type
@@ -58,7 +59,7 @@ DirectoryEntry* f_opendir(char* directory) {
 	
 	while (bytes_count < BLOCK_SIZE) {
 		// retrieve the first 20 bytes of FAT[0]
-		memcpy(sub_dir, &data_section[0] + bytes_count, sizeof(DirectoryEntry));
+		memcpy(sub_dir, root_data + bytes_count, sizeof(DirectoryEntry));
 		print_subdir(sub_dir);
 
 		// check if the filename matches
@@ -75,126 +76,50 @@ DirectoryEntry* f_opendir(char* directory) {
 	return NULL;
 }
 
-// DirectoryEntry* f_opendir(char *directory) { // maybe make directory const char * since it shouldn't change?
-//     int total_entries = num_dir_per_block; // get the number of directory entries total in FAT
-
-// 	// using the FAT, read through all the entries
-//     for (int i = 0; i < total_entries; i++) {
-//         DirectoryEntry* dir_entry = &FAT[i];
-
-// 		// checking if the dir_entry matches the directory name
-//         if (strcmp(dir_entry->filename, directory) == 0) {
-//             // return a copy of the DirectoryEntry
-//             DirectoryEntry* dir_open = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-
-//             if (dir_open == NULL) {
-//                 printf("ERROR: Memory allocation failed.\n");
-//                 return NULL;
-//             }
-
-//             memcpy(dir_open, dir_entry, sizeof(DirectoryEntry));
-//             return dir_open;
-//         }
-//     }
-
-//     // directory not found in the FAT
-//     printf("ERROR: Directory "%s" could not be found.\n", directory);
-//     return NULL;
-// }
-
-// DirectoryEntry* f_readdir(FileHandle fh) {
-//     DirectoryEntry* file = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-    
-// 	if (file == NULL) {
-//         printf("ERROR: Memory allocation for directory entry failed.\n");
-//         return NULL;
-//     }
-
-//     // check if file descriptor is valid
-//     if (fh->file_desc < 0) {
-//         printf("ERROR: Invalid file descriptor.\n");
-//         return NULL;
-//     }
-
-//     // Check if directory offset is beyond the directory size
-//     if (open_files[fd].offset >= cur_disk->sb.size) {
-//         printf("ERROR: End of the directory reached.\n");
-//         return NULL;
-//     }
-
-//     // Check read permission for the directory
-//     if (!(cur_disk->inodes[open_files[fd].node].permission & PERMISSION_R)) {
-//         printf("ERROR: Cannot read directory, do not have permission.\n");
-//         return NULL;
-//     }
-
-//     // Calculate block number and offset within the block
-//     int FILE_ENTRY_N = BLOCK_SIZE / FILE_ENTRY_SIZE;
-//     int block_num = open_files[fd].offset / FILE_ENTRY_N;
-//     int block_rmd = open_files[fd].offset % FILE_ENTRY_N;
-
-//     // Load the target block from the FAT (simulate loading block)
-//     struct data_block target_block = load_block(open_files[fd].node, block_num);
-
-//     // Parse the directory entry from the loaded block
-//     subfile->node = *((int*)(target_block.data + block_rmd * FILE_ENTRY_SIZE));
-//     memcpy(subfile->file_name, target_block.data + block_rmd * FILE_ENTRY_SIZE + sizeof(int),
-//            MAX_FILENAME_LENGTH);
-//     subfile->file_name[MAX_FILENAME_LENGTH] = '\0'; // Ensure null-termination for the filename
-
-//     // Free the loaded block data (simulated here)
-//     free(target_block.data);
-
-//     // Increment directory offset for the next read operation
-//     open_files[fd].offset++;
-
-//     return subfile;
-// }
-
 // Open a file, return a FileHandle 
 // My attempt to open file1.txt 
 // Will fix it so that it calls open_dir before opening a file
-FileHandle* f_open(char* filename, char *access) {
-  // check if access is valid
-	if (!check_access(access)) {
-		printf("Invalid access type.\n");
-		return NULL;
-	}
+// FileHandle* f_open(char* filename, char *access) {
+//   // check if access is valid
+// 	if (!check_access(access)) {
+// 		printf("Invalid access type.\n");
+// 		return NULL;
+// 	}
   
-	// look into FAT[0], find a DirectoryEntry with the same filename
-	int bytes_count = 0;
-	DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-	while (bytes_count < BLOCK_SIZE) {
-		// retrieve the first 13 bytes of FAT[0]
-		memcpy(sub_dir, &FAT[0] + bytes_count, sizeof(DirectoryEntry));
-		print_subdir(sub_dir);
+// 	// look into FAT[0], find a DirectoryEntry with the same filename
+// 	int bytes_count = 0;
+// 	DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+// 	while (bytes_count < BLOCK_SIZE) {
+// 		// retrieve the first 13 bytes of FAT[0]
+// 		memcpy(sub_dir, &FAT[0] + bytes_count, sizeof(DirectoryEntry));
+// 		print_subdir(sub_dir);
 
-		// check if the filename matches
-		if (compare_filename(filename, sub_dir)) {
-			// create a new FileHandle
-			FileHandle* file = (FileHandle*)malloc(sizeof(FileHandle));
-			file->abs_path = filename;
-			file->file_desc = 0; // file descriptor
-			file->access = access;
-			file->position = 0;
-			printf("File opened: %s\n", filename);
+// 		// check if the filename matches
+// 		if (compare_filename(filename, sub_dir)) {
+// 			// create a new FileHandle
+// 			FileHandle* file = (FileHandle*)malloc(sizeof(FileHandle));
+// 			file->abs_path = filename;
+// 			file->file_desc = 0; // file descriptor
+// 			file->access = access;
+// 			file->position = 0;
+// 			printf("File opened: %s\n", filename);
 
-			return file;
-		} else {
-			// move to the next DirectoryEntry
-			bytes_count += sizeof(DirectoryEntry);
-			printf("bytes_count: %d\n", bytes_count);
-		}
-	}
+// 			return file;
+// 		} else {
+// 			// move to the next DirectoryEntry
+// 			bytes_count += sizeof(DirectoryEntry);
+// 			printf("bytes_count: %d\n", bytes_count);
+// 		}
+// 	}
 
-	return NULL;
-}
+// 	return NULL;
+// }
 
-// Close a file
-void f_close(FileHandle* file) {
-	free(file);
-	printf("File closed.\n");
-}
+// // Close a file
+// void f_close(FileHandle* file) {
+// 	free(file);
+// 	printf("File closed.\n");
+// }
 
 // to be called before the mainloop
 void fs_mount(char *diskname) {
@@ -238,9 +163,9 @@ void fs_mount(char *diskname) {
 	printf("Root directory: %s\n", root_dir_entry.filename);
 
 	//read + define datablock section
-	fseek(disk, BLOCK_SIZE * sb.DATA_offset, SEEK_SET); // Move to first block in data section
-	fread(data_section, BLOCK_SIZE * sb.file_size_blocks, 1, disk); //Directory is size: 512 bytes
-	printf("Data section: %s\n", data_section);
+	fseek(disk, BLOCK_SIZE * ROOT_DATABLOCK, SEEK_SET); // Move to first block in data section
+	fread(root_data, BLOCK_SIZE * sb.file_size_blocks, 1, disk); //Directory is size: 512 bytes
+	printf("Data section: %s\n", root_data);
 
 	fclose(disk);
 }
@@ -268,10 +193,4 @@ int main(void) {
 	f_opendir("fake_disk.img");
 	
 	// Open a file
-	FileHandle* file = f_open("/file1.txt", "r");
-	if (file == NULL) {
-		printf("File not found.\n");
-	} else {
-		printf("File opened: %s\n", file->abs_path);
-	}
 }
