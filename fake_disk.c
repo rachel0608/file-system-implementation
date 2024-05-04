@@ -1,10 +1,19 @@
 /*
-Layout: superblock (1) | FAT (8) | FREEMAP (1) | ROOTDIR (1) | DATA
+Layout: superblock (1) (0) | FAT (8) (1-8) | FREEMAP (1) (9) | ROOTDIR (1) (10) | DATA (11 reserved, start at 12)
 
 FAT[0] is reserved for root directory
 FAT[1] is folder1 (empty)
 FAT[2] is folder2 (empty)
 FAT[3] is file1.txt
+
+Superblock:
+File size: 1 MB
+FAT offset: 1
+Free map offset: 9
+Root directory offset: 10
+Data offset: 12
+Block size: 512
+File size in blocks: 2048
 */ 
 
 #include <stdio.h>
@@ -34,10 +43,11 @@ typedef struct {
 } BitmapBlock;
 
 typedef struct {
-    char filename[8+1];
-    char ext[3+1];
+    char filename[8];
+    char ext[3];
     uint16_t first_logical_cluster;
     uint32_t file_size;
+    uint16_t type; // 0 for file, 1 for directory
 } DirectoryEntry;
 
 void writeSuperblock(FILE *disk) {
@@ -128,6 +138,7 @@ void writeRootDir(FILE *disk) {
     strcpy(rootDir.ext, "");
     rootDir.first_logical_cluster = 0;
     rootDir.file_size = 0;
+    rootDir.type = 1; // directory
 
     fseek(disk, BLOCK_SIZE * 10, SEEK_SET); // Root directory starts at block 10
     fwrite(&rootDir, sizeof(DirectoryEntry), 1, disk);
@@ -144,20 +155,23 @@ void readRootDir(FILE *disk) {
 void writeSubDir(FILE *disk) {
     DirectoryEntry subDir[3]; // 2 folders, 1 file
     
-    strcpy(subDir[0].filename, "folder1");
-    strcpy(subDir[0].ext, "");
+    memcpy(subDir[0].filename, "folder1", 8);
+    memcpy(subDir[0].ext, "", 3);
     subDir[0].first_logical_cluster = 1;
     subDir[0].file_size = 0;
+    subDir[0].type = 1; // directory
 
-    strcpy(subDir[1].filename, "folder2");
-    strcpy(subDir[1].ext, "");
+    memcpy(subDir[1].filename, "folder2", 8);
+    memcpy(subDir[1].ext, "", 3);
     subDir[1].first_logical_cluster = 2;
     subDir[1].file_size = 0;
+    subDir[1].type = 1; // directory
 
-    strcpy(subDir[2].filename, "file1");
-    strcpy(subDir[2].ext, "txt");
+    memcpy(subDir[2].filename, "file1", 8);
+    memcpy(subDir[2].ext, "txt", 3);
     subDir[2].first_logical_cluster = 3;
     subDir[2].file_size = 5;
+    subDir[2].type = 0; // file
 
     fseek(disk, BLOCK_SIZE * 11, SEEK_SET); // Subdirectories start at block 11
     fwrite(&subDir, sizeof(DirectoryEntry), 3, disk);
@@ -170,12 +184,24 @@ void writeData(FILE *disk) {
     fwrite(&data, sizeof(char), BLOCK_SIZE, disk);
 }
 
+// void readData(FILE *disk) {
+//     char data[BLOCK_SIZE];
+//     int offset = 3 + 11; // file1.txt starts at logical block 3
+//     fseek(disk, BLOCK_SIZE * offset, SEEK_SET); 
+//     fread(&data, sizeof(char), BLOCK_SIZE, disk);
+//     printf("Data: %s\n", data);
+// }
+
 void readData(FILE *disk) {
-    char data[BLOCK_SIZE];
-    int offset = 3 + 11; // file1.txt starts at logical block 3
-    fseek(disk, BLOCK_SIZE * offset, SEEK_SET); 
-    fread(&data, sizeof(char), BLOCK_SIZE, disk);
-    printf("Data: %s\n", data);
+    DirectoryEntry subDir[3]; // 2 folders, 1 file
+
+	printf("Data Info:\n");
+	fseek(disk, BLOCK_SIZE * 11, SEEK_SET);
+    for (int i = 0; i < 3; i++) {
+        fread(&subDir[i], sizeof(DirectoryEntry), 1, disk);
+        printf("Data: %s\n", subDir[i].filename);
+    }   
+
 }
 
 int main() {
