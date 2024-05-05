@@ -1,10 +1,13 @@
 /*
 Layout: superblock (1) (0) | FAT (8) (1-8) | FREEMAP (1) (9) | ROOTDIR (1) (10) | DATA (11 reserved, start at 12)
 
-FAT[0] is reserved for root directory
-FAT[1] is folder1 (empty)
-FAT[2] is folder2 (empty)
-FAT[3] is file1.txt
+Data Section:
+Logical cluster 0 (physical cluster 11) is reserved for root directory
+1 is content of folder1 
+2 is content offolder2 (empty)
+3 is content of file1.txt
+4 marks EOF for file1.txt 
+5 is content of folder_a
 
 Superblock:
 File size: 1 MB
@@ -19,36 +22,12 @@ File size in blocks: 2048
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include "fat.h"
+#include "filesystem.h"
 
 #define BLOCK_SIZE 512
 #define FAT_SIZE 8 // in blocks
 #define ROOT_DIR_SIZE 1
-
-typedef struct {
-    uint8_t file_size_mb;
-    uint8_t FAT_offset;
-    uint8_t FREEMAP_offset;
-    uint8_t ROOTDIR_offset;
-    uint8_t DATA_offset;
-    uint16_t block_size;
-    uint32_t file_size_blocks;
-} superblock;
-
-typedef struct {
-    uint16_t block_number;
-} FATEntry;
-
-typedef struct {
-    uint8_t bitmap[BLOCK_SIZE];
-} BitmapBlock;
-
-typedef struct {
-    char filename[8];
-    char ext[3];
-    uint16_t first_logical_cluster;
-    uint32_t file_size;
-    uint16_t type; // 0 for file, 1 for directory
-} DirectoryEntry;
 
 void writeSuperblock(FILE *disk) {
     superblock sb;
@@ -82,8 +61,11 @@ void writeFAT(FILE *disk) {
     FATEntry FAT[fat_entry_count];
     memset(FAT, 0, sizeof(FAT)); // init all FAT to 0
 
-    // Folder1 and Folder2 are empty
-    FAT[1].block_number = 0; // EOF
+    // folder1 contains folder_a
+    FAT[1].block_number = 5;
+    FAT[5].block_number = 0; // EOF
+
+    // Folder2 is empty
     FAT[2].block_number = 0; // EOF
 
     // Allocate blocks for file1.txt  
@@ -111,8 +93,8 @@ void writeBitmap(FILE *disk) {
     BitmapBlock bitmap;
     memset(bitmap.bitmap, 1, BLOCK_SIZE);
 
-    // Mark blocks 1-4 as used
-    for (int i = 1; i <= 4; i++) {
+    // Mark blocks 1-5 as used
+    for (int i = 1; i <= 5; i++) {
         bitmap.bitmap[i] = 0;
     }
 
@@ -178,6 +160,17 @@ void writeSubDir(FILE *disk) {
 }
 
 void writeData(FILE *disk) {
+    // write data for folder1 in logical cluster 5
+    DirectoryEntry subDir[2];
+    memcpy(subDir[1].filename, "folder_a", 8); // folder1 stores folder_a
+    memcpy(subDir[1].ext, "", 3);
+    subDir[1].first_logical_cluster = 5;
+    subDir[1].file_size = 0;
+    subDir[1].type = 1; // directory
+    fseek(disk, BLOCK_SIZE * (11+5), SEEK_SET); 
+    fwrite(&subDir[1], sizeof(DirectoryEntry), 1, disk);
+
+    // write data for file1.txt in logical cluster 3
     char data[BLOCK_SIZE] = "Hello";
     int offset = 3 + 11; // file1.txt starts at logical block 3
     fseek(disk, BLOCK_SIZE * offset, SEEK_SET); 
@@ -195,7 +188,7 @@ void writeData(FILE *disk) {
 void readData(FILE *disk) {
     DirectoryEntry subDir[3]; // 2 folders, 1 file
 
-	printf("Data Info:\n");
+	printf("Root Data Info:\n");
 	fseek(disk, BLOCK_SIZE * 11, SEEK_SET);
     for (int i = 0; i < 3; i++) {
         fread(&subDir[i], sizeof(DirectoryEntry), 1, disk);
@@ -206,7 +199,7 @@ void readData(FILE *disk) {
 
 int main() {
     // Create disk
-    FILE *disk = fopen("fake_disk.img", "wb");
+    FILE *disk = fopen("fake_disk_3_folders.img", "wb");
     if (disk == NULL) {
         printf("Error creating disk image.\n");
         return 1;
@@ -223,7 +216,7 @@ int main() {
     printf("Hardcoded disk created successfully.\n");
 
     // Read disk
-    disk = fopen("fake_disk.img", "rb");
+    disk = fopen("fake_disk_3_folders.img", "rb");
 
     readSuperblock(disk);
     readFAT(disk);
