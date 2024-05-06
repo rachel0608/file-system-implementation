@@ -23,7 +23,8 @@
 #define EOF 0
 #define ROOTDIR 0
 #define BITS_PER_BLOCK (BLOCKSIZE * 8)
-#define DIR_SIZE_CAP 16
+#define DIR_SIZE_CAP 26
+#define DIR 1
 
 
 typedef struct {
@@ -45,19 +46,12 @@ typedef struct {
 } BitmapBlock;
 
 typedef struct {
-    char filename[9];
+    char filename[8];
     char ext[3];
-    uint16_t attributes;
-    uint16_t reserved;
-    uint16_t creation_time;
-    uint16_t creation_date;
-    uint16_t last_access_date;
-    uint16_t ignored;
-    uint16_t last_write_time;
-    uint16_t last_write_date;
-    uint16_t first_block;
-    uint16_t file_size; // 0 for directories
-} DirectoryEntry; //32 bytes
+    uint16_t first_logical_cluster;
+    uint32_t file_size;
+    uint16_t type; // 0 for file, 1 for directory
+} DirectoryEntry; //19 bytes
 
 typedef struct {
     DirectoryEntry entries[DIR_SIZE_CAP];
@@ -183,8 +177,9 @@ void initialize_rootdir(FILE *disk_image, superblock sb) {
 
     DirectoryEntry root_dir_entry;
     strcpy(root_dir_entry.filename, "/"); //filename of root directory entry should be "/"
-    root_dir_entry.first_block = ROOTDIR; //points to first datablock-> holds directory for root level
+    root_dir_entry.first_logical_cluster = ROOTDIR; //points to first datablock-> holds directory for root level
     root_dir_entry.file_size = ROOTDIR;
+    root_dir_entry.type = DIR;
     fseek(disk_image, (BLOCKSIZE * sb.ROOTDIR_offset), SEEK_SET);
     fwrite(&root_dir_entry, sizeof(DirectoryEntry), 1, disk_image); //Directory Entry is size: 32 bytes
 
@@ -192,8 +187,9 @@ void initialize_rootdir(FILE *disk_image, superblock sb) {
     Directory root_dir;
     DirectoryEntry curr_dir_entry;
     strcpy(curr_dir_entry.filename, "."); // Filename of current directory entry should be "."
-    curr_dir_entry.first_block = ROOTDIR;      // Points to first data block
+    curr_dir_entry.first_logical_cluster = ROOTDIR;      // Points to first data block
     curr_dir_entry.file_size = ROOTDIR;        // Dirs set to size 0
+    curr_dir_entry.type = DIR;
     root_dir.entries[ROOTDIR] = curr_dir_entry; // Assuming the root directory is at index 0
 
     fseek(disk_image, (BLOCKSIZE * (sb.DATA_offset + ROOTDIR)), SEEK_SET); // Move to first block in data section
