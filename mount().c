@@ -27,23 +27,16 @@ typedef struct {
 } BitmapBlock;
 
 typedef struct {
-    char filename[9];
+    char filename[8];
     char ext[3];
-    uint16_t attributes;
-    uint16_t reserved;
-    uint16_t creation_time;
-    uint16_t creation_date;
-    uint16_t last_access_date;
-    uint16_t ignored;
-    uint16_t last_write_time;
-    uint16_t last_write_date;
-    uint16_t first_block;
-    uint16_t file_size; // 0 for directories
-} DirectoryEntry; //32 bytes
+    uint16_t first_logical_cluster;
+    uint32_t file_size;
+    uint16_t type; // 0 for file, 1 for directory
+} DirectoryEntry; //19 bytes
 
 typedef struct {
-    DirectoryEntry entries[16];
-} Directory; //holds 16 DirectoryEntrys
+    DirectoryEntry entries[26];
+} Directory; //holds 26 DirectoryEntrys
 
 typedef struct {
     char buffer[BLOCKSIZE];
@@ -73,6 +66,10 @@ int main() {
 void fs_mount(char *diskname) {
 
     FILE *disk = fopen(diskname, "rb");
+    if (disk == NULL) {
+        fprintf(stderr, "Error: Failed to open disk file '%s'\n", diskname);
+        exit(EXIT_FAILURE);
+    }
     printf("file opened\n");
 
     //extern superblock, FAT, bitmap, rootdir, data_section globals declared in header, defined in this func
@@ -111,33 +108,14 @@ void fs_mount(char *diskname) {
 
     //read + define rootdirentry
     fseek(disk, BLOCKSIZE * sb.ROOTDIR_offset, SEEK_SET);
-    fread(&root_dir_entry, sizeof(DirectoryEntry), 1, disk); //Directory Entry is size: 32 bytes
+    fread(&root_dir_entry, sizeof(DirectoryEntry), 1, disk); //Directory Entry is size: 19 bytes
     printf("-----------------------------------");
     printf("\nroot dir entry read and defined:\n");
-    char filename[9];
-    char ext[3];
-    uint16_t attributes;
-    uint16_t reserved;
-    uint16_t creation_time;
-    uint16_t creation_date;
-    uint16_t last_access_date;
-    uint16_t ignored;
-    uint16_t last_write_time;
-    uint16_t last_write_date;
-    uint16_t first_block;
-    uint16_t file_size; // 0 for directories
     printf("filename: %s\n", root_dir_entry.filename);
     printf("ext: %s\n", root_dir_entry.ext);
-    printf("attributes: %d\n", root_dir_entry.attributes);
-    printf("reserved: %d\n", root_dir_entry.reserved);
-    printf("creation time: %d\n", root_dir_entry.creation_time);
-    printf("creation date: %d\n", root_dir_entry.creation_date);
-    printf("last access date: %d\n", root_dir_entry.last_access_date);
-    printf("ignored: %d\n", root_dir_entry.ignored);
-    printf("last write time: %d\n", root_dir_entry.last_write_time);
-    printf("last write date: %d\n", root_dir_entry.last_write_date);
-    printf("first block: %d\n", root_dir_entry.first_block);
+    printf("first block: %d\n", root_dir_entry.first_logical_cluster);
     printf("file size: %d\n", root_dir_entry.file_size);
+    printf("file type: %d\n", root_dir_entry.type);
 
     data_section = (datablock *)malloc(num_blocks * sizeof(data_section));
 
@@ -151,7 +129,8 @@ void fs_mount(char *diskname) {
     // Access the first block in the data section to verify the copy
     printf("Root dir's first entry filename: %s\n", root_dir->entries[0].filename);
     printf("Root dir's first entry file size: %d\n", root_dir->entries[0].file_size);
-    printf("Root dir's first entry first block: %d\n", root_dir->entries[0].first_block);
+    printf("Root dir's first entry first block: %d\n", root_dir->entries[0].first_logical_cluster);
+    printf("Root dir's first entry type: %d\n", root_dir->entries[0].type);
 
     fclose(disk);
 }
