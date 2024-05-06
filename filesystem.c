@@ -49,6 +49,52 @@ void print_subdir(DirectoryEntry* sub_dir) {
 	printf("File size: %d\n\n", sub_dir->file_size);
 }
 
+FileHandle* f_open(char* path, char* access) {
+	if (!check_access) {
+		printf("ERROR: Invalid access type.\n");
+		return NULL;
+	}
+
+	DirectoryEntry* open_entry = f_opendir(path);
+
+	if (open_entry == NULL) {
+		printf("ERROR: File at this path not found - %s\n", path);
+		return NULL;
+	}
+
+	FileHandle* file = (FileHandle*)malloc(sizeof(FileHandle));
+	file->abs_path = path;
+	file->file_desc = 0;  // Default for now, can change, just put 0
+	file->access = access;
+	file->position = 0;
+
+	return file;
+}
+
+int f_read(FileHandle file, void* buffer, size_t bytes) {
+	// Checking if the file can be opened for reading
+	if ((strcmp(file.access, "r") != 0) && (strcmp(file.access, "r+") != 0) && (strcmp(file.access, "a+") != 0)) {
+        printf("ERROR: Cannot open file for reading.\n");
+        return -1;
+    }
+
+	// Maybe change find_file to opendir??
+    DirectoryEntry *dir_entry = find_file(file->abs_path);
+    if (dir_entry == NULL) {
+        printf("ERROR: File at this path not found - %s\n", file->abs_path);
+        return -1;
+    }
+
+	FATEntry start_cluster;
+    start_cluster.block_number = dir_entry->first_logical_cluster;
+    fat_read_file_contents(&start_cluster, dir_entry->file_size, buffer);
+
+	file->position += bytes;
+	return bytes;
+}
+
+// int f_write(FileHandle file, void* buffer, size_t bytes);
+
 // Open a directory 
 // Currently open in root directory
 // Might fix to return a DIR struct instead of DirectoryEntry
@@ -74,6 +120,10 @@ DirectoryEntry* f_opendir(char* directory) {
 	}
 
 	return NULL;
+}
+
+DirectoryEntry* f_readdir(char* path) {
+
 }
 
 // Open a file, return a FileHandle 
@@ -120,6 +170,8 @@ DirectoryEntry* f_opendir(char* directory) {
 // 	free(file);
 // 	printf("File closed.\n");
 // }
+
+
 
 // to be called before the mainloop
 void fs_mount(char *diskname) {
