@@ -157,8 +157,35 @@ DirectoryEntry* f_opendir(char* directory) {
 	return NULL;
 }
 
-DirectoryEntry* f_readdir(char* path) {
 
+DirectoryEntry* f_readdir(char* path) {
+    int current_entry = 0; // keep track of the current entry
+    DirectoryEntry* dir = NULL; // pointer to the directory entries
+
+    // If this is the first call, open the directory and get the entries
+    if (dir == NULL) {
+        dir = f_opendir(path);
+        if (dir == NULL) {
+            return NULL; // Error opening directory
+        }
+    }
+
+    // Check if we've reached the end of the directory
+    if (current_entry >= BLOCK_SIZE / sizeof(DirectoryEntry)) {
+        f_closedir(path); // Close the directory
+        dir = NULL;
+        current_entry = 0;
+        return NULL; // No more entries
+    }
+
+    DirectoryEntry* entry = &dir->entries[current_entry++];
+
+    // Check if the entry is valid (non-empty filename)
+    if (entry->filename[0] == '\0') {
+        return f_readdir(path); // Skip empty entries and get the next one
+    }
+
+    return entry;
 }
 
 // Open a file, return a FileHandle 
