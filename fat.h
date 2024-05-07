@@ -13,12 +13,20 @@ typedef struct {
 } DirectoryEntry; 
 
 typedef struct {
+    DirectoryEntry entries[BLOCK_SIZE / sizeof(DirectoryEntry)];
+} Directory; //holds 26 DirectoryEntrys
+
+typedef struct {
     uint16_t block_number;
 } FATEntry;
 
 typedef struct {
     uint8_t bitmap[BLOCK_SIZE];
 } BitmapBlock;
+
+typedef struct {
+    char buffer[BLOCK_SIZE];
+} datablock; //holds a block of data
 
 // find the directory entry for a file 
 DirectoryEntry* find_file(char* filename);
