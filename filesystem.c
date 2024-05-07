@@ -7,6 +7,11 @@
 #include "filesystem.h"
 #include "fat.h"
 
+// Seek offset constants
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
 superblock sb;
 FATEntry *FAT;
 BitmapBlock bitmap;
@@ -93,6 +98,37 @@ FileHandle* f_open(char* path, char* access) {
 */
 
 // int f_write(FileHandle file, void* buffer, size_t bytes);
+
+int f_seek(FileHandle* file, long offset, int whence) {
+    if (file == NULL) {
+        printf("ERROR: File is invalid.\n");
+        return -1;
+    }
+
+    long new_pos;
+
+    if (whence == SEEK_SET) { // Seeks from beginning of file
+        new_pos = offset;
+    } else if (whence == SEEK_CUR) { // Seeks from curr position of file
+        new_pos = file->position + offset;
+    } else if (whence == SEEK_END) { // Seeks from end of the file
+        new_position = file->file_size + offset;
+    } else {
+        printf("ERROR: Seek mode is invalid.\n");
+        return -1;
+    }
+
+    // Checking if the new_pos is valid in the file
+	// Should we also check if it fits within the file's size (aka max pos)?
+    if (new_position < 0) {
+        printf("ERROR: Seek position is invalid.\n");
+        return -1;
+    }
+
+    file->position = new_position;
+
+    return 0; // Returning 0 to indicate success~!
+}
 
 // Open a directory 
 // Currently open in root directory
