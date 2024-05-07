@@ -4,7 +4,7 @@ Layout: superblock (1) (0) | FAT (8) (1-8) | FREEMAP (1) (9) | ROOTDIR (1) (10) 
 Data Section:
 Logical cluster 0 (physical cluster 11) is reserved for root directory
 1 is content of folder1 
-2 is content offolder2 (empty)
+2 is content of folder2 (empty)
 3 is content of file1.txt
 4 marks EOF for file1.txt 
 5 is content of folder_a
@@ -35,7 +35,7 @@ void writeSuperblock(FILE *disk) {
     sb.FAT_offset = 1;
     sb.FREEMAP_offset = 9;
     sb.ROOTDIR_offset = 10;
-    sb.DATA_offset = 12;
+    sb.DATA_offset = 11;
     sb.block_size = BLOCK_SIZE;
     sb.file_size_blocks = 1 * (1024 * 1024) / BLOCK_SIZE;
     
@@ -167,7 +167,7 @@ void writeData(FILE *disk) {
     subDir[1].first_logical_cluster = 5;
     subDir[1].file_size = 0;
     subDir[1].type = 1; // directory
-    fseek(disk, BLOCK_SIZE * (11+5), SEEK_SET); 
+    fseek(disk, BLOCK_SIZE * (11+1), SEEK_SET); 
     fwrite(&subDir[1], sizeof(DirectoryEntry), 1, disk);
 
     // write data for file1.txt in logical cluster 3
