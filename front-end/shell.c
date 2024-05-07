@@ -231,6 +231,7 @@ void execute_command(char *command_line) {
         printf("command: ls\n");
         printf("l flag: %d\n", ls_l_flag);
         printf("F flag: %d\n", ls_F_flag);
+        // TODO: support redirection
     } else if (strcmp(args[0], "cd") == 0) {
         printf("command: cd\n");
         // char path = my_pwd();
@@ -238,6 +239,7 @@ void execute_command(char *command_line) {
     } else if (strcmp(args[0], "pwd") == 0) {
         // my_pwd();
         printf("command: pwd\n");
+        // TODO: support redirection
     } else if (strcmp(args[0], "mkdir") == 0) {
         printf("command: mkdir\n");
         // char path = my_pwd();
@@ -254,10 +256,12 @@ void execute_command(char *command_line) {
         printf("command: cat\n");
         // char path = my_pwd();
         // my_cat(path, args + 1);
+        // TODO: support redirection
     } else if (strcmp(args[0], "more") == 0) {
         printf("command: more\n");
         // char path = my_pwd();
         // my_more(path, args + 1);
+        // TODO: support redirection
     } else if (strcmp(args[0], "chmod") == 0) {
         printf("command: chmod\n");
         // char path = my_pwd();
