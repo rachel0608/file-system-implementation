@@ -157,7 +157,7 @@ DirectoryEntry* f_opendir(char* directory) {
 	return NULL;
 }
 
-
+// just an outline, still need to fix -- Cecilia
 DirectoryEntry* f_readdir(char* path) {
     int current_entry = 0; // keep track of the current entry
     DirectoryEntry* dir = NULL; // pointer to the directory entries
@@ -178,7 +178,7 @@ DirectoryEntry* f_readdir(char* path) {
         return NULL; // No more entries
     }
 
-    DirectoryEntry* entry = &dir->entries[current_entry++];
+    DirectoryEntry* entry = &dir->entries[current_entry++]; // need to adjust for our FAT
 
     // Check if the entry is valid (non-empty filename)
     if (entry->filename[0] == '\0') {
