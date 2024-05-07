@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -w
+CFLAGS = -Wall
 LDFLAGS = -lreadline
 
 all: shell my_ls

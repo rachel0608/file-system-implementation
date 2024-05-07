@@ -32,34 +32,35 @@ void handle_sigint(int sig) {
 
 // lists all the files in the current or specified directory
 void my_ls(char **args, int l_flag, int F_flag) {
-    char *path = args;
-    
-    // use current directory if no argument
-    if (args == NULL){
-        path = ".";
+    char *path = ".";  // Default to current directory
+
+    if (args[1] != NULL) {
+        path = args[1];  // Use the provided directory path
     }
-
-    DIR *dir;                 // Pointer to the directory
-    struct dirent *entry;     // Pointer to each directory entry
-
 
     printf("entered path: %s\n", path);
 
-    // open the directory
+    DIR *dir;
+    struct dirent *entry;
+
+    // Open the directory
     dir = opendir(path);
     if (dir == NULL) {
         perror("opendir");
+        return;
     }
 
-    // read and print each directory entry
+    // TODO: handle flags
+    
+    // Read and print each directory entry
     while ((entry = readdir(dir)) != NULL) {
-        // ignore current and previous directory (. and ..)
+        // Ignore current and previous directory (. and ..)
         if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
             printf("%s\n", entry->d_name);
         }
     }
 
-    // close the directory
+    // Close the directory
     closedir(dir);
 }
 
@@ -129,7 +130,7 @@ int my_chmod(const char *path, char **args) {
 }
 
 // function to translate relative address to absolute
-char *relative_to_absolute(const char *relative_path, const char *current_directory) {
+char *relative_to_absolute(char *relative_path, char *current_directory) {
     // return a char of absolute address
 }
 
@@ -139,23 +140,23 @@ void child_handler(int signum, siginfo_t *info, void *context){
     //si_code in the info struct contains if the child is suspended, exited, or interrupted...
  	
    	if(info->si_code == CLD_EXITED){
-        printf("(Exited)\n");
+        // printf("(Exited)\n");
         int status;
         waitpid(pid, &status, WNOHANG);
     }
     if(info->si_code== CLD_KILLED){
         // avoid zombie process
         int status;
-        printf("(Killed)\n");
+        // printf("(Killed)\n");
         waitpid(pid, &status, WNOHANG);
     }
     if(info->si_code == CLD_CONTINUED){
-        printf("(Resumed)\n");
+        // printf("(Resumed)\n");
         struct termios setting;
 	}
     if(info->si_code == CLD_STOPPED){
         kill(pid, SIGSTOP);
-        printf("(Suspended)\n");
+        // printf("(Suspended)\n");
    	}
 }
 
@@ -227,10 +228,10 @@ void execute_command(char *command_line) {
 
     // handle built-in commands
     if (strcmp(args[0], "ls") == 0) {
-        // my_ls(args + 1, ls_l_flag, ls_F_flag);
         printf("command: ls\n");
         printf("l flag: %d\n", ls_l_flag);
         printf("F flag: %d\n", ls_F_flag);
+        my_ls(&args, ls_l_flag, ls_F_flag);
         // TODO: support redirection
     } else if (strcmp(args[0], "cd") == 0) {
         printf("command: cd\n");
