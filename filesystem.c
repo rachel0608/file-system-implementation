@@ -7,15 +7,13 @@
 #include "filesystem.h"
 #include "fat.h"
 
-#define FAT_ENTRY_COUNT 4096
-#define ROOT_DATABLOCK 11
-
 superblock sb;
-FATEntry FAT[FAT_ENTRY_COUNT];
+FATEntry *FAT;
 BitmapBlock bitmap;
 DirectoryEntry root_dir_entry;
-char root_data[BLOCK_SIZE]; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
-int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 25 entries per block
+Directory *root_dir;
+datablock *data_section; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
+int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per block
 
 // helper function to check access type
 bool check_access(char* input) {
@@ -71,7 +69,7 @@ FileHandle* f_open(char* path, char* access) {
 	return file;
 }
 
-int f_read(FileHandle file, void* buffer, size_t bytes) {
+/* int f_read(FileHandle file, void* buffer, size_t bytes) {
 	// Checking if the file can be opened for reading
 	if ((strcmp(file.access, "r") != 0) && (strcmp(file.access, "r+") != 0) && (strcmp(file.access, "a+") != 0)) {
         printf("ERROR: Cannot open file for reading.\n");
@@ -92,6 +90,7 @@ int f_read(FileHandle file, void* buffer, size_t bytes) {
 	file->position += bytes;
 	return bytes;
 }
+*/
 
 // int f_write(FileHandle file, void* buffer, size_t bytes);
 
@@ -105,7 +104,7 @@ DirectoryEntry* f_opendir(char* directory) {
 	
 	while (bytes_count < BLOCK_SIZE) {
 		// retrieve the first 20 bytes of FAT[0]
-		memcpy(sub_dir, root_data + bytes_count, sizeof(DirectoryEntry));
+		memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
 		print_subdir(sub_dir);
 
 		// check if the filename matches
@@ -172,53 +171,76 @@ DirectoryEntry* f_readdir(char* path) {
 // }
 
 
-
 // to be called before the mainloop
 void fs_mount(char *diskname) {
+
 	// extern superblock, FAT, bitmap, rootdir, data_section globals declared in header, defined in this func
 	FILE *disk = fopen(diskname, "rb");
-
+	if (disk == NULL) {
+	    fprintf(stderr, "Error: Failed to open disk file '%s'\n", diskname);
+	    exit(EXIT_FAILURE);
+	}
+	
 	//read + define superblock
 	fseek(disk, 0, SEEK_SET);
 	fread(&sb, sizeof(superblock), 1, disk);
 	printf("Superblock Info:\n");
-    printf("File size: %d MB\n", sb.file_size_mb);
-    printf("FAT offset: %d\n", sb.FAT_offset);
-    printf("Free map offset: %d\n", sb.FREEMAP_offset);
-    printf("Root directory offset: %d\n", sb.ROOTDIR_offset);
-    printf("Data offset: %d\n", sb.DATA_offset);
-    printf("Block size: %d\n", sb.block_size);
-    printf("File size in blocks: %d\n", sb.file_size_blocks);
-    printf("\n");
-
+	printf("File size: %d MB\n", sb.file_size_mb);
+	printf("FAT offset: %d\n", sb.FAT_offset);
+	printf("Free map offset: %d\n", sb.FREEMAP_offset);
+	printf("Root directory offset: %d\n", sb.ROOTDIR_offset);
+	printf("Data offset: %d\n", sb.DATA_offset);
+	printf("Block size: %d\n", sb.block_size);
+	printf("File size in blocks: %d\n", sb.file_size_blocks);
+	printf("\n");
+	
 	//read + define FAT
+    FAT = (FATEntry *)malloc(sb.file_size_blocks * sizeof(FATEntry));
 	fseek(disk, BLOCK_SIZE * sb.FAT_offset, SEEK_SET);
 	fread(FAT, (sb.file_size_blocks * sizeof(FATEntry)), 1, disk);
 	printf("FAT Info:\n");
-    for (int i = 0; i < FAT_ENTRY_COUNT; i++) {
-        printf("%d ", FAT[i].block_number);
-    }
-    printf("\n");
-
+	for (int i = 0; i < 10; i++) {
+	    //replace 10 with sb.file_size_blocks to print entire data section
+        printf("fat cell %d: %d\n", i, FAT[i].block_number); 
+	}
+	printf("\n");
+	
 	//read + define bitmap
 	fseek(disk, BLOCK_SIZE * sb.FREEMAP_offset, SEEK_SET);
 	fread(&bitmap, sizeof(BitmapBlock), 1, disk);
 	printf("Bitmap Info:\n");
-    for (int i = 0; i < BLOCK_SIZE; i++) {
-        printf("%d", (bitmap.bitmap[i]));
+	for (int i = 0; i < BLOCK_SIZE; i++) {
+	    printf("%d", (bitmap.bitmap[i]));
+	}
+	printf("\n");
+	
+	//read + define rootdirentry
+	fseek(disk, BLOCK_SIZE * sb.ROOTDIR_offset, SEEK_SET);
+	fread(&root_dir_entry, sizeof(DirectoryEntry), 1, disk); //Directory Entry is size: 19 bytes
+	printf("Root directory: %s\n", root_dir_entry.filename);
+	printf("first block: %d\n", root_dir_entry.first_logical_cluster);
+    printf("file size: %d\n", root_dir_entry.file_size);
+    printf("file type: %d\n", root_dir_entry.type);
+	printf("\n");
+	
+	//read + define datablock section
+    data_section = (datablock *)malloc(sb.file_size_blocks * sizeof(datablock));
+	fseek(disk, BLOCK_SIZE * sb.DATA_offset, SEEK_SET); // Move to first block in data section
+	fread(data_section, BLOCK_SIZE, sb.file_size_blocks, disk); //Directory is size: 512 bytes
+	printf("Data section: \n");
+    for (int i = 0; i < 10; i++) {
+        //replace 10 with sb.file_size_blocks to print entire data section
+        printf("block %d: %s\n", i, data_section[i].buffer);
     }
     printf("\n");
 
-	//read + define rootdirentry
-	fseek(disk, BLOCK_SIZE * sb.ROOTDIR_offset, SEEK_SET);
-	fread(&root_dir_entry, sizeof(DirectoryEntry), 1, disk); //Directory Entry is size: 32 bytes
-	printf("Root directory: %s\n", root_dir_entry.filename);
-
-	//read + define datablock section
-	fseek(disk, BLOCK_SIZE * ROOT_DATABLOCK, SEEK_SET); // Move to first block in data section
-	fread(root_data, BLOCK_SIZE * sb.file_size_blocks, 1, disk); //Directory is size: 512 bytes
-	printf("Data section: %s\n", root_data);
-
+    // Access the first block in the data section to verify the copy
+    root_dir = (Directory *) data_section[0].buffer;
+    printf("Root dir's first entry filename: %s\n", root_dir->entries[0].filename);
+    printf("Root dir's first entry file size: %d\n", root_dir->entries[0].file_size);
+    printf("Root dir's first entry first block: %d\n", root_dir->entries[0].first_logical_cluster);
+    printf("Root dir's first entry type: %d\n", root_dir->entries[0].type);
+	
 	fclose(disk);
 }
 
@@ -239,10 +261,10 @@ void read_dir(char *diskname) {
 
 int main(void) {
 	// Mount the filesystem
-	fs_mount("fake_disk.img");
+	fs_mount("fake_disk_3_folders.img");
 
 	// read_dir("fake_disk.img");
-	f_opendir("fake_disk.img");
+	//f_opendir("fake_disk.img");
 	
 	// Open a file
 }
