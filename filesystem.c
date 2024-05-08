@@ -130,6 +130,24 @@ int f_seek(FileHandle* file, long offset, int whence) {
     return 0; // Returning 0 to indicate success~!
 }
 
+void f_rewind(FileHandle file) {
+    if (file == NULL) {
+        printf("ERROR: No file is open.\n");
+        return;
+    }
+
+    if (f_seek(file, 0, SEEK_SET) != 0) {
+        printf("ERROR: Failed to f_rewind() file pointer.\n");
+        return;
+    }
+
+    // printf("File pointer rewound to the start of the file.\n"); // Success message~!
+}
+
+// int f_stat(FileHandle file, struct stat *buffer);
+// int f_remove(const char* filename);
+
+
 // Open a directory 
 // Currently open in root directory
 // Might fix to return a DIR struct instead of DirectoryEntry
