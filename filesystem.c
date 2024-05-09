@@ -13,7 +13,7 @@
 #define SEEK_END 2
 #define MAX_DIRS 100
 
-// DirectoryEntry open_dirs[MAX_DIRS]; // All files that are open
+FileHandle* open_dirs[MAX_DIRS]; // All files that are open
 superblock sb;
 FATEntry *FAT;
 BitmapBlock bitmap;
@@ -36,13 +36,34 @@ bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
     return strcmp(filename, full_filename) == 0;
 }
 
+bool compare_cluster(const char* filename, const DirectoryEntry* dir_entry) {
+    // Combine filename and extension for comparison
+    char full_filename[11];
+    strncpy(full_filename, dir_entry->filename, 8);
+    // strncat(full_filename, ".", 1);
+	strcat(full_filename, ".");
+    strncat(full_filename, dir_entry->ext, 3);
+	printf("full_filename: %s\n", full_filename);
+
+    // Compare the full filename
+    return strcmp(filename, full_filename) == 0;
+}
+
 // print a subdirectory
 void print_subdir(DirectoryEntry* sub_dir) {
 	printf("Subdirectory Info:\n");
 	printf("Filename: %s\n", sub_dir->filename);
 	printf("Extension: %s\n", sub_dir->ext);
 	printf("First logical cluster: %d\n", sub_dir->first_logical_cluster);
-	printf("File size: %d\n\n", sub_dir->file_size);
+	// printf("File size: %d\n\n", sub_dir->file_size);
+}
+
+void reformat_path(char *path) { // Removes the files from path
+    char *last_slash = strrchr(path, '/'); // finds last occurrence of '/'
+
+    if (last_slash != NULL) {
+        *last_slash = '\0'; // truncates the string at the last '/'
+    }
 }
 
 FileHandle* f_open(char* path, char* access) {
@@ -54,8 +75,11 @@ FileHandle* f_open(char* path, char* access) {
 
 	// check user permission -- if user can R, then cannot W
 	// if user cannot R or W, then just return null
+	// For now not done since we don't have user type id
 
 	// parse path first -- path included file names. (/home/a.txt --> /home)
+	reformat_path(path);
+
 	DirectoryEntry* open_entry = f_opendir(path);
 
 	if (open_entry == NULL) {
@@ -63,9 +87,40 @@ FileHandle* f_open(char* path, char* access) {
 		return NULL; 
 	}
 
-	// check if this file exits in the give path
+	// check if this file exists in the give path
 	// if yes, just return file handle
 	// if not, then create a new file handle and return
+	// look into FAT[0], find a DirectoryEntry with the same filename
+	int bytes_count = 0;
+	DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+	
+	while (bytes_count < BLOCK_SIZE) {
+		// retrieve the first 20 bytes of FAT[0]
+		memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
+		print_subdir(sub_dir);
+
+		// check if the filename matches
+		if (strcmp(open_entry->filename, sub_dir->filename) == 0) {
+			printf("Directory opened: %s\n", open_entry->filename);
+
+			int i = 0;
+
+			while (open_dirs[i]) {
+				if (strcmp(open_dirs[i]->abs_path, path) == 0) {
+					open_dirs[i] = NULL;
+					i++;
+				}
+			}
+
+			return open_dirs[i];
+		} else {
+			// move to the next DirectoryEntry
+			bytes_count += sizeof(DirectoryEntry);
+			printf("bytes_count: %d\n", bytes_count);
+		}
+	}
+
+	free(sub_dir);
 
 	FileHandle* file = (FileHandle*)malloc(sizeof(FileHandle));
 	file->abs_path = path;
@@ -73,6 +128,13 @@ FileHandle* f_open(char* path, char* access) {
 	file->access = access;
 	file->position = 0;
 
+	int j = 0;
+
+	while (open_dirs[j] != NULL) {
+		j++;
+	}
+
+	open_dirs[j] = file;
 	return file;
 }
 
@@ -101,50 +163,50 @@ FileHandle* f_open(char* path, char* access) {
 
 // int f_write(FileHandle file, void* buffer, size_t bytes);
 
-// int f_seek(FileHandle* file, long offset, int whence) {
-//     if (file == NULL) {
-//         printf("ERROR: File is invalid.\n");
-//         return -1;
-//     }
+int f_seek(FileHandle* file, long offset, int whence) {
+    if (file == NULL) {
+        printf("ERROR: File is invalid.\n");
+        return -1;
+    }
 
-//     long new_pos;
+    long new_pos;
 
-//     if (whence == SEEK_SET) { // Seeks from beginning of file
-//         new_pos = offset;
-//     } else if (whence == SEEK_CUR) { // Seeks from curr position of file
-//         new_pos = file->position + offset;
-//     } else if (whence == SEEK_END) { // Seeks from end of the file
-//         new_position = file->file_size + offset;
-//     } else {
-//         printf("ERROR: Seek mode is invalid.\n");
-//         return -1;
-//     }
+    if (whence == SEEK_SET) { // Seeks from beginning of file
+        new_pos = offset;
+    } else if (whence == SEEK_CUR) { // Seeks from curr position of file
+        new_pos = file->position + offset;
+    } else if (whence == SEEK_END) { // Seeks from end of the file
+        new_pos = file->file_size + offset;
+    } else {
+        printf("ERROR: Seek mode is invalid.\n");
+        return -1;
+    }
 
-//     // Checking if the new_pos is valid in the file
-// 	// Should we also check if it fits within the file's size (aka max pos)?
-//     if (new_position < 0) {
-//         printf("ERROR: Seek position is invalid.\n");
-//         return -1;
-//     }
+    // Checking if the new_pos is valid in the file
+	// Should we also check if it fits within the file's size (aka max pos)?
+    if (new_pos < 0) {
+        printf("ERROR: Seek position is invalid.\n");
+        return -1;
+    }
 
-//     file->position = new_position;
+    file->position = new_pos;
 
-//     return 0; // Returning 0 to indicate success~!
-// }
+    return 0; // Returning 0 to indicate success~!
+}
 
-// void f_rewind(FileHandle file) {
-//     if (file == NULL) {
-//         printf("ERROR: No file is open.\n");
-//         return;
-//     }
+void f_rewind(FileHandle* file) {
+    if (file == NULL) {
+        printf("ERROR: No file is open.\n");
+        return;
+    }
 
-//     if (f_seek(file, 0, SEEK_SET) != 0) {
-//         printf("ERROR: Failed to f_rewind() file pointer.\n");
-//         return;
-//     }
+    if (f_seek(file, 0, SEEK_SET) != 0) {
+        printf("ERROR: Failed to f_rewind() file pointer.\n");
+        return;
+    }
 
-//     // printf("File pointer rewound to the start of the file.\n"); // Success message~!
-// }
+    // printf("File pointer rewound to the start of the file.\n"); // Success message~!
+}
 
 // int f_stat(FileHandle file, struct stat *buffer);
 // int f_remove(const char* filename);
@@ -178,7 +240,7 @@ DirectoryEntry* f_opendir(char* directory) {
 }
 
 // int f_closedir(DirectoryEntry* dir_entry) {
-// 	i = 0;
+// 	int i = 0;
 
 // 	while (open_dirs[i]) {
 // 		if (open_dirs[i]->first_logical_cluster == dir_entry->first_logical_cluster) {
@@ -315,7 +377,7 @@ void fs_mount(char *diskname) {
 	fread(&root_dir_entry, sizeof(DirectoryEntry), 1, disk); //Directory Entry is size: 19 bytes
 	printf("Root directory: %s\n", root_dir_entry.filename);
 	printf("first block: %d\n", root_dir_entry.first_logical_cluster);
-    printf("file size: %d\n", root_dir_entry.file_size);
+    // printf("file size: %d\n", root_dir_entry.file_size);
     printf("file type: %d\n", root_dir_entry.type);
 	printf("\n");
 	
@@ -333,7 +395,7 @@ void fs_mount(char *diskname) {
     // Access the first block in the data section to verify the copy
     root_dir = (Directory *) data_section[0].buffer;
     printf("Root dir's first entry filename: %s\n", root_dir->entries[0].filename);
-    printf("Root dir's first entry file size: %d\n", root_dir->entries[0].file_size);
+    // printf("Root dir's first entry file size: %d\n", root_dir->entries[0].file_size);
     printf("Root dir's first entry first block: %d\n", root_dir->entries[0].first_logical_cluster);
     printf("Root dir's first entry type: %d\n", root_dir->entries[0].type);
 	

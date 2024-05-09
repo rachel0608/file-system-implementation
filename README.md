@@ -41,7 +41,7 @@ gcc -o filesystem filesystem.c
 
 <!-- Data Section:
       ______________________________________________________________________
-      | folder 1, folder 1, file1.txt | folder_a | EOF | Hello | EOF | EOF |
+      | folder 1, folder 2, file1.txt | folder_a | EOF | Hello | EOF | EOF |
       ----------------------------------------------------------------------
                       0                     1       2      3      4      5
  -->
