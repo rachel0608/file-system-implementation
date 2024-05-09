@@ -30,13 +30,13 @@ void f_close(FileHandle* file);
 // int f_seek(FileHandle* file, long offset, int whence);
 // void f_rewind(FileHandle file);
 // int f_stat(FileHandle file, struct stat *buffer);
-int f_remove(const char* path);
+// int f_remove(const char* path);
 DirectoryEntry* f_opendir(char* path);
-// DirectoryEntry* f_readdir(char* path);
+DirectoryEntry* f_readdir(char* path);
 int f_closedir(char* path);
-int f_mkdir(char* path);
-int f_rmdir(char* path);
-void fs_mount(char *diskname);
+// int f_mkdir(char* path);
+// int f_rmdir(char* path);
+// void fs_mount(char *diskname);
 
 // f_mount(); // Extra credit
 // f_umount(); // Extra credit
