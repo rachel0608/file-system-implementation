@@ -97,7 +97,7 @@ void fs_mount(char *diskname) {
     printf("\nfat read and defined: uncomment to print fat contents\n");
     for (int i = 0; i < num_blocks; i++) {
         //Uncomment to print fat contents
-        //printf("fat cell %d: %d\n", i, fat[i].block_number); 
+        printf("fat cell %d: %d\n", i, fat[i].block_number); 
     }
 
     //read + define bitmap

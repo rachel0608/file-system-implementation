@@ -23,9 +23,12 @@ int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per b
 
 // helper function to compare filename
 bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
+	printf("directory: %s\n", filename);
+	printf("subdir: %s\n", dir_entry->filename);
+	printf("ext: %s\n", dir_entry->ext);
     // if the entry is a directory
     if (dir_entry->type == 1) {
-	return strcmp(filename, dir_entry->filename) == 0;
+		return strcmp(filename, dir_entry->filename) == 0;
     }
 
     // else combine filename and extension for comparison
@@ -62,17 +65,18 @@ void print_subdir(DirectoryEntry* sub_dir) {
 }
 
 void reformat_path(char* path) { // removes the file from dir path
-	if ((path == NULL) || (*path == '\0')) {
-		printf("ERROR: Invalid path.\n");
-		return;
-	}
-
-    char *last_slash = strrchr(path, '/');
-    
-    if (last_slash != NULL) {
-        char *new_path = last_slash + 1;
-        memmove(path, new_path, strlen(new_path) + 1);
+	if (path == NULL || *path == '\0') {
+        printf("Invalid input: NULL pointer or empty string.\n");
+        return;
     }
+    char *last_slash = strrchr(path, '/'); // Find last occurrence of ‘/’
+    if (last_slash != NULL) {
+        *last_slash = '\0'; // Truncate the string at the last ‘/’
+    } else {
+        printf("No ‘/’ found in the string.\n");
+    }
+
+	strcat(path, "/");
 }
 
 FileHandle* f_open(char* path, char* access) {
@@ -425,11 +429,11 @@ void print_file_handle(FileHandle* fh) {
 
 int main(void) {
 	// Mount the filesystem
-	// fs_mount("fake_disk_3_folders.img");
-	fs_mount("fake_disk.img");
+	fs_mount("fake_disk_3_folders.img");
+	// fs_mount("fake_disk.img");
 
 	// f_readdir("fake_disk.img");
-	f_opendir("file1.txt");
+	f_opendir("folder1");
 	printf("HERE\n");
 	FileHandle* fh = f_open("/file1.txt", "r");
 	printf("HERE2\n");
