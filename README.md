@@ -28,3 +28,7 @@ filesystem.c
 ====================================================================================
 gcc -o filesystem filesystem.c
 
+<!-- With fake_disk the FAT table should be: -->
+<!--  
+      0 | root_dir |
+-->

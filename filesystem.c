@@ -20,15 +20,6 @@ Directory *root_dir;
 datablock *data_section; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
 int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per block
 
-// helper function to check access type
-bool check_access(char* input) {
-	int is_r = strcmp(input, "r");
-	int is_w = strcmp(input, "w");
-	int is_a = strcmp(input, "a");
-
-	return (is_r == 0) || (is_w == 0) || (is_a == 0);
-}
-
 // helper function to compare filename
 bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
     // Combine filename and extension for comparison
