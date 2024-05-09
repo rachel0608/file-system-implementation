@@ -99,50 +99,50 @@ FileHandle* f_open(char* path, char* access) {
 
 // int f_write(FileHandle file, void* buffer, size_t bytes);
 
-int f_seek(FileHandle* file, long offset, int whence) {
-    if (file == NULL) {
-        printf("ERROR: File is invalid.\n");
-        return -1;
-    }
+// int f_seek(FileHandle* file, long offset, int whence) {
+//     if (file == NULL) {
+//         printf("ERROR: File is invalid.\n");
+//         return -1;
+//     }
 
-    long new_pos;
+//     long new_pos;
 
-    if (whence == SEEK_SET) { // Seeks from beginning of file
-        new_pos = offset;
-    } else if (whence == SEEK_CUR) { // Seeks from curr position of file
-        new_pos = file->position + offset;
-    } else if (whence == SEEK_END) { // Seeks from end of the file
-        new_position = file->file_size + offset;
-    } else {
-        printf("ERROR: Seek mode is invalid.\n");
-        return -1;
-    }
+//     if (whence == SEEK_SET) { // Seeks from beginning of file
+//         new_pos = offset;
+//     } else if (whence == SEEK_CUR) { // Seeks from curr position of file
+//         new_pos = file->position + offset;
+//     } else if (whence == SEEK_END) { // Seeks from end of the file
+//         new_position = file->file_size + offset;
+//     } else {
+//         printf("ERROR: Seek mode is invalid.\n");
+//         return -1;
+//     }
 
-    // Checking if the new_pos is valid in the file
-	// Should we also check if it fits within the file's size (aka max pos)?
-    if (new_position < 0) {
-        printf("ERROR: Seek position is invalid.\n");
-        return -1;
-    }
+//     // Checking if the new_pos is valid in the file
+// 	// Should we also check if it fits within the file's size (aka max pos)?
+//     if (new_position < 0) {
+//         printf("ERROR: Seek position is invalid.\n");
+//         return -1;
+//     }
 
-    file->position = new_position;
+//     file->position = new_position;
 
-    return 0; // Returning 0 to indicate success~!
-}
+//     return 0; // Returning 0 to indicate success~!
+// }
 
-void f_rewind(FileHandle file) {
-    if (file == NULL) {
-        printf("ERROR: No file is open.\n");
-        return;
-    }
+// void f_rewind(FileHandle file) {
+//     if (file == NULL) {
+//         printf("ERROR: No file is open.\n");
+//         return;
+//     }
 
-    if (f_seek(file, 0, SEEK_SET) != 0) {
-        printf("ERROR: Failed to f_rewind() file pointer.\n");
-        return;
-    }
+//     if (f_seek(file, 0, SEEK_SET) != 0) {
+//         printf("ERROR: Failed to f_rewind() file pointer.\n");
+//         return;
+//     }
 
-    // printf("File pointer rewound to the start of the file.\n"); // Success message~!
-}
+//     // printf("File pointer rewound to the start of the file.\n"); // Success message~!
+// }
 
 // int f_stat(FileHandle file, struct stat *buffer);
 // int f_remove(const char* filename);
@@ -175,36 +175,36 @@ DirectoryEntry* f_opendir(char* directory) {
 	return NULL;
 }
 
-// just an outline, still need to fix -- Cecilia
-DirectoryEntry* f_readdir(char* path) {
-    int current_entry = 0; // keep track of the current entry
-    DirectoryEntry* dir = NULL; // pointer to the directory entries
+// // just an outline, still need to fix -- Cecilia
+// DirectoryEntry* f_readdir(char* path) {
+//     int current_entry = 0; // keep track of the current entry
+//     DirectoryEntry* dir = NULL; // pointer to the directory entries
 
-    // If this is the first call, open the directory and get the entries
-    if (dir == NULL) {
-        dir = f_opendir(path);
-        if (dir == NULL) {
-            return NULL; // Error opening directory
-        }
-    }
+//     // If this is the first call, open the directory and get the entries
+//     if (dir == NULL) {
+//         dir = f_opendir(path);
+//         if (dir == NULL) {
+//             return NULL; // Error opening directory
+//         }
+//     }
 
-    // Check if we've reached the end of the directory
-    if (current_entry >= BLOCK_SIZE / sizeof(DirectoryEntry)) {
-        f_closedir(path); // Close the directory
-        dir = NULL;
-        current_entry = 0;
-        return NULL; // No more entries
-    }
+//     // Check if we've reached the end of the directory
+//     if (current_entry >= BLOCK_SIZE / sizeof(DirectoryEntry)) {
+//         f_closedir(path); // Close the directory
+//         dir = NULL;
+//         current_entry = 0;
+//         return NULL; // No more entries
+//     }
 
-    DirectoryEntry* entry = &dir->entries[current_entry++]; // need to adjust for our FAT
+//     DirectoryEntry* entry = &dir->entries[current_entry++]; // need to adjust for our FAT
 
-    // Check if the entry is valid (non-empty filename)
-    if (entry->filename[0] == '\0') {
-        return f_readdir(path); // Skip empty entries and get the next one
-    }
+//     // Check if the entry is valid (non-empty filename)
+//     if (entry->filename[0] == '\0') {
+//         return f_readdir(path); // Skip empty entries and get the next one
+//     }
 
-    return entry;
-}
+//     return entry;
+// }
 
 // Open a file, return a FileHandle 
 // My attempt to open file1.txt 
@@ -342,10 +342,11 @@ void read_dir(char *diskname) {
 
 int main(void) {
 	// Mount the filesystem
-	fs_mount("fake_disk_3_folders.img");
+	// fs_mount("fake_disk_3_folders.img");
+	fs_mount("fake_disk.img");
 
-	// read_dir("fake_disk.img");
-	//f_opendir("fake_disk.img");
+	// f_readdir("fake_disk.img");
+	f_opendir("fake_disk.img");
 	
 	// Open a file
 }

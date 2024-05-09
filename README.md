@@ -22,3 +22,9 @@ side-effects: reads/prints/defines the following variables/structs:  superblock
                                                                      rootdir entry
                                                                      datablock section                                                                       (0 block                                                                               reserved for                                                                           root dir)
 mount works for any disk formatted with format.c, including a fake disk that works with pre-existing files/directories
+
+
+filesystem.c
+====================================================================================
+gcc -o filesystem filesystem.c
+
