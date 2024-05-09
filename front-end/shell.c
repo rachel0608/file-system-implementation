@@ -18,11 +18,15 @@
 #define FAIL -1
 #define MAX_INPUT_SIZE 1024
 #define DELIMITERS " ;\t\n"
+#define MAX_PATH_LENGTH 1024
+#define MAX_DIR_LENGTH 8
+#define MAX_EXT_LENGTH 3
 
 // temp includes for front end testing (will use our own FS library later)
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#define CAT_BUFFER_SIZE 1024
 
 int interrupted = 0;
 
@@ -75,49 +79,153 @@ void my_cd(const char *path, char **args) {
 }
 
 // prints the current working directory to terminal
-char my_pwd(void) {
-    // output absolute address to terminal
-    // also returns the char of path to current working directory
+void my_pwd(void) {
+    char current_working_dir[MAX_PATH_LENGTH];
+    
+    if (getcwd(current_working_dir, sizeof(current_working_dir)) != NULL) {
+        printf("%s\n", current_working_dir);
+    } else {
+        perror("getcwd() error");
+    }
 }
 
 // creates a directory
-int my_mkdir(const char *path, char **args) {
-    // if no args, return -1 
-    // if len(args[1]) > 8, return -1 (name too long)
-    // if no args or given dir not found, return -1
-    // return 1 when done
+int my_mkdir(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "mkdir: missing args\n");
+        return -1;
+    }
+
+    if (strlen(args[1]) > MAX_DIR_LENGTH) {
+        fprintf(stderr, "mkdir: directory name too long\n");
+        return -1;
+    }
+
+    mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;  // Set directory permissions
+
+    if (mkdir(args[1], mode) == -1) {
+        perror("mkdir");
+        return -1;
+    }
+
+    return 1;
 }
 
 // removes a directory
-int my_rmdir(const char *path, char **args) {
-    // if no args, return -1 
-    // if len(args[1]) > 8, return -1 (name too long)
-    // if no args or given dir not found, return -1
-    // return 1 when done
+int my_rmdir(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "rmdir: missing operand\n");
+        return -1;
+    }
+
+    if (strlen(args[1]) > MAX_DIR_LENGTH) {
+        fprintf(stderr, "rmdir: directory name too long\n");
+        return -1;
+    }
+
+    if (rmdir(args[1]) == -1) {
+        perror("rmdir");
+        return -1;
+    }
+
+    return 1;
 }
 
 // deletes a file
-int my_rm(const char *path, char **args) {
-    // if no args, return -1 
-    // if len(args[1]) > 8, return -1 (name too long)
-    // if no args or given dir not found, return -1
-    // return 1 when done
+#define CAT_BUFFER_SIZE 1024
+
+int my_rm(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "rm: missing operand\n");
+        return -1;
+    }
+
+    if (remove(args[1]) == -1) {
+        perror("rm");
+        return -1;
+    }
+
+    return 1;
 }
 
 // displays the content of one or more files to the output
-void my_cat(const char *path, char **args) {
-    // if no args, return -1 
-    // if len(args[1]) > 8, return -1 (name too long)
-    // if no args or given dir not found, return -1
-    // output file content to terminal
+int my_cat(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "cat: missing operand\n");
+        return -1;
+    }
+
+    int fd = open(args[1], O_RDONLY);
+    if (fd == -1) {
+        perror("cat");
+        return -1;
+    }
+
+    char buffer[CAT_BUFFER_SIZE];
+    ssize_t bytes_read;
+    while ((bytes_read = read(fd, buffer, CAT_BUFFER_SIZE)) > 0) {
+        write(STDOUT_FILENO, buffer, bytes_read);
+    }
+
+    if (bytes_read == -1) {
+        perror("cat");
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 1;
 }
 
 // lists a file a screen at a time
-void my_more(const char *path, char **args) {
-    // if no args, return -1 
-    // if len(args[1]) > 8, return -1 (name too long)
-    // if no args or given dir not found, return -1
-    // output to terminal
+#define BUFFER_SIZE 1024
+#define PAGE_SIZE 20
+
+int my_more(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "more: missing operand\n");
+        return -1;
+    }
+
+    int fd = open(args[1], O_RDONLY);
+    if (fd == -1) {
+        perror("more");
+        return -1;
+    }
+
+    char *buffer = malloc(BUFFER_SIZE);
+    if (buffer == NULL) {
+        fprintf(stderr, "more: memory allocation failed\n");
+        close(fd);
+        return -1;
+    }
+
+    ssize_t bytes_read;
+    int line_count = 0;
+    while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0) {
+        for (ssize_t i = 0; i < bytes_read; i++) {
+            write(STDOUT_FILENO, &buffer[i], 1);
+            if (buffer[i] == '\n') {
+                line_count++;
+                if (line_count == PAGE_SIZE) {
+                    printf("--More--");
+                    getchar();
+                    line_count = 0;
+                }
+            }
+        }
+    }
+
+    if (bytes_read == -1) {
+        perror("more");
+        free(buffer);
+        close(fd);
+        return -1;
+    }
+
+    free(buffer);
+    close(fd);
+    return 1;
 }
 
 // changes the permissions mode of a file
@@ -358,7 +466,8 @@ int main() {
     }
     
     // main loop
-    // TODO: call fs_mount to mount on our own disk
+    // TODO: call fs_mount to mount on our own disk: fs_mount(<disk_name>)
+    
     while (1) {
         // reset or empty input each time
         if (input){

@@ -36,6 +36,7 @@ DirectoryEntry* f_readdir(char* path);
 int f_closedir(char* path);
 int f_mkdir(char* path);
 int f_rmdir(char* path);
+void fs_mount(char *diskname);
 
 // f_mount(); // Extra credit
 // f_umount(); // Extra credit
