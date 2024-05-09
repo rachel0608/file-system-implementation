@@ -11,9 +11,9 @@
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
-#define MAX_FILES 100
+#define MAX_DIRS 100
 
-FileHandle all_files[MAX_FILES]; // All files that are open
+// DirectoryEntry open_dirs[MAX_DIRS]; // All files that are open
 superblock sb;
 FATEntry *FAT;
 BitmapBlock bitmap;
@@ -169,9 +169,18 @@ DirectoryEntry* f_opendir(char* directory) {
 	return NULL;
 }
 
-int f_closedir(DirectoryEntry* dir_entry) {
-	
-}
+// int f_closedir(DirectoryEntry* dir_entry) {
+// 	i = 0;
+
+// 	while (open_dirs[i]) {
+// 		if (open_dirs[i]->first_logical_cluster == dir_entry->first_logical_cluster) {
+// 			open_dirs[i] = NULL;
+// 			i++;
+// 		}
+// 	}
+
+// 	free(dir_entry);
+// }
 
 // // just an outline, still need to fix -- Cecilia
 // DirectoryEntry* f_readdir(char* path) {
