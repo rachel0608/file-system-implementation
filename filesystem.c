@@ -23,13 +23,17 @@ int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per b
 
 // helper function to compare filename
 bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
-    // Combine filename and extension for comparison
-    char full_filename[11];
+    // if the entry is a directory
+    if (dir_entry->type == 1) {
+	return strcmp(filename, dir_entry->filename) == 0;
+    }
+
+    // else combine filename and extension for comparison
+    char full_filename[12];
     strncpy(full_filename, dir_entry->filename, 8);
-    // strncat(full_filename, ".", 1);
 	strcat(full_filename, ".");
     strncat(full_filename, dir_entry->ext, 3);
-	printf("full_filename: %s\n", full_filename);
+	// printf("full_filename: %s\n", full_filename);
 
     // Compare the full filename
     return strcmp(filename, full_filename) == 0;
@@ -268,7 +272,7 @@ DirectoryEntry* f_opendir(char* directory) {
 	while (bytes_count < BLOCK_SIZE) {
 		// retrieve the first 20 bytes of FAT[0]
 		memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
-		print_subdir(sub_dir);
+		//print_subdir(sub_dir);
 
 		// check if the filename matches
 		if (compare_filename(directory, sub_dir)) {
@@ -277,7 +281,7 @@ DirectoryEntry* f_opendir(char* directory) {
 		} else {
 			// move to the next DirectoryEntry
 			bytes_count += sizeof(DirectoryEntry);
-			printf("bytes_count: %d\n", bytes_count);
+			//printf("bytes_count: %d\n", bytes_count);
 		}
 	}
 
