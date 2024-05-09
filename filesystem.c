@@ -1,5 +1,4 @@
 // filesystem.c
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -24,13 +23,17 @@ int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per b
 
 // helper function to compare filename
 bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
-    // Combine filename and extension for comparison
-    char full_filename[11];
+    // if the entry is a directory
+    if (dir_entry->type == 1) {
+	return strcmp(filename, dir_entry->filename) == 0;
+    }
+
+    // else combine filename and extension for comparison
+    char full_filename[12];
     strncpy(full_filename, dir_entry->filename, 8);
-    // strncat(full_filename, ".", 1);
 	strcat(full_filename, ".");
     strncat(full_filename, dir_entry->ext, 3);
-	printf("full_filename: %s\n", full_filename);
+	// printf("full_filename: %s\n", full_filename);
 
     // Compare the full filename
     return strcmp(filename, full_filename) == 0;
@@ -58,11 +61,17 @@ void print_subdir(DirectoryEntry* sub_dir) {
 	// printf("File size: %d\n\n", sub_dir->file_size);
 }
 
-void reformat_path(char *path) { // Removes the files from path
-    char *last_slash = strrchr(path, '/'); // finds last occurrence of '/'
+void reformat_path(char* path) { // removes the file from dir path
+	if ((path == NULL) || (*path == '\0')) {
+		printf("ERROR: Invalid path.\n");
+		return;
+	}
 
+    char *last_slash = strrchr(path, '/');
+    
     if (last_slash != NULL) {
-        *last_slash = '\0'; // truncates the string at the last '/'
+        char *new_path = last_slash + 1;
+        memmove(path, new_path, strlen(new_path) + 1);
     }
 }
 
@@ -73,17 +82,25 @@ FileHandle* f_open(char* path, char* access) {
 		return NULL;
 	}
 
+	printf("HERE4\n");
+
 	// check user permission -- if user can R, then cannot W
 	// if user cannot R or W, then just return null
 	// For now not done since we don't have user type id
 
 	// parse path first -- path included file names. (/home/a.txt --> /home)
-	reformat_path(path);
+	char new_path[2048];
+	strncpy(new_path, path, sizeof(new_path) - 1);
+	reformat_path(new_path);
 
-	DirectoryEntry* open_entry = f_opendir(path);
+	printf("\nHERE5\n");
+	printf("Path: %s\n", path);
+	printf("Reformatted Path: %s\n", new_path);
+
+	DirectoryEntry* open_entry = f_opendir(new_path);
 
 	if (open_entry == NULL) {
-		printf("ERROR: File at this path not found - %s\n", path);
+		printf("ERROR: File at this path not found - %s\n", new_path);
 		return NULL; 
 	}
 
@@ -137,6 +154,38 @@ FileHandle* f_open(char* path, char* access) {
 	open_dirs[j] = file;
 	return file;
 }
+
+int f_close(FileHandle* file) {
+	if (file == NULL) {
+		perror("ERROR: File does not exist.\n");
+        return EOF;
+	}
+
+	int i = 0;
+	int closed = 0;
+
+	while (open_dirs[i]) {
+		if (strcmp(open_dirs[i]->abs_path, file->abs_path) == 0) {
+			open_dirs[i] = NULL;
+			closed = 1;
+		}
+
+		i++;
+	}
+
+	if (closed == 0) {
+		perror("ERROR: File does not exist.\n");
+        return EOF;
+	}
+
+	free(file);
+	return 0;
+}
+
+// more cleanup?
+	// TODO: Remove dir_entry's FileHandle from the global open files array
+	// Concern: How do we compare DirectoryEntry and FileHandle?????
+	// FileHandle* open_dirs[MAX_DIRS];
 
 /* int f_read(FileHandle file, void* buffer, size_t bytes) {
 	// Checking if the file can be opened for reading
@@ -223,7 +272,7 @@ DirectoryEntry* f_opendir(char* directory) {
 	while (bytes_count < BLOCK_SIZE) {
 		// retrieve the first 20 bytes of FAT[0]
 		memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
-		print_subdir(sub_dir);
+		//print_subdir(sub_dir);
 
 		// check if the filename matches
 		if (compare_filename(directory, sub_dir)) {
@@ -232,7 +281,7 @@ DirectoryEntry* f_opendir(char* directory) {
 		} else {
 			// move to the next DirectoryEntry
 			bytes_count += sizeof(DirectoryEntry);
-			printf("bytes_count: %d\n", bytes_count);
+			//printf("bytes_count: %d\n", bytes_count);
 		}
 	}
 
@@ -240,12 +289,9 @@ DirectoryEntry* f_opendir(char* directory) {
 }
 
 int f_closedir(DirectoryEntry* dir_entry) {
-
 	if (dir_entry == NULL) {
         return -1;
     }
-
-    // more cleanup??
 
     free(dir_entry);
 
@@ -358,13 +404,37 @@ void fs_mount(char *diskname) {
 	fclose(disk);
 }
 
+void print_file_handle(FileHandle* fh) {
+	if (fh == NULL) {
+		printf("ERROR: Cannot print file handle because file handle is NULL.\n");
+		return;
+	}
+
+	printf("Printing FILE HANDLE==============\n");
+	printf("HERE10\n");
+	printf("abs_path:  %s\n", fh->abs_path);
+	printf("HERE11\n");
+	printf("file_desc:  %d\n", fh->file_desc);
+	printf("HERE12\n");
+	printf("access:  %s\n", fh->access);
+	printf("HERE13\n");
+	printf("position:  %d\n", fh->position);
+	printf("HERE14\n");
+	printf("file_size:  %d\n", fh->file_size);
+}
+
 int main(void) {
 	// Mount the filesystem
 	// fs_mount("fake_disk_3_folders.img");
 	fs_mount("fake_disk.img");
 
 	// f_readdir("fake_disk.img");
-	f_opendir("fake_disk.img");
+	f_opendir("file1.txt");
+	printf("HERE\n");
+	FileHandle* fh = f_open("/file1.txt", "r");
+	printf("HERE2\n");
+	print_file_handle(fh);
+	printf("HERE3\n");
 	
 	// Open a file
 }
