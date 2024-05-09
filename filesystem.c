@@ -52,12 +52,20 @@ FileHandle* f_open(char* path, char* access) {
 		return NULL;
 	}
 
+	// check user permission -- if user can R, then cannot W
+	// if user cannot R or W, then just return null
+
+	// parse path first -- path included file names. (/home/a.txt --> /home)
 	DirectoryEntry* open_entry = f_opendir(path);
 
 	if (open_entry == NULL) {
 		printf("ERROR: File at this path not found - %s\n", path);
-		return NULL;
+		return NULL; 
 	}
+
+	// check if this file exits in the give path
+	// if yes, just return file handle
+	// if not, then create a new file handle and return
 
 	FileHandle* file = (FileHandle*)malloc(sizeof(FileHandle));
 	file->abs_path = path;
