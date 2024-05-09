@@ -14,7 +14,7 @@ typedef struct {
 
 typedef struct {
     DirectoryEntry entries[BLOCK_SIZE / sizeof(DirectoryEntry)];
-} Directory; //holds 26 DirectoryEntrys
+} Directory; //holds 26 DirectoryEntrys if 1MB disk
 
 typedef struct {
     uint16_t block_number;
