@@ -9,6 +9,7 @@ typedef struct {
     char ext[3];
     uint16_t first_logical_cluster;
     uint16_t type; // 0 for file, 1 for directory
+    uint32_t file_size;
 } DirectoryEntry; 
 
 typedef struct {
