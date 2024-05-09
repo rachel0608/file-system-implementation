@@ -11,7 +11,9 @@
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
+#define MAX_FILES 100
 
+FileHandle all_files[MAX_FILES]; // All files that are open
 superblock sb;
 FATEntry *FAT;
 BitmapBlock bitmap;
@@ -167,6 +169,10 @@ DirectoryEntry* f_opendir(char* directory) {
 	return NULL;
 }
 
+int f_closedir(DirectoryEntry* dir_entry) {
+	
+}
+
 // // just an outline, still need to fix -- Cecilia
 // DirectoryEntry* f_readdir(char* path) {
 //     int current_entry = 0; // keep track of the current entry
@@ -317,20 +323,20 @@ void fs_mount(char *diskname) {
 	fclose(disk);
 }
 
-// debug function to read the root directory
-void read_dir(char *diskname) {
-	FILE *disk = fopen(diskname, "rb");
-	DirectoryEntry subDir[3]; // 2 folders, 1 file
+// // debug function to read the root directory
+// void read_dir(char *diskname) {
+// 	FILE *disk = fopen(diskname, "rb");
+// 	DirectoryEntry subDir[3]; // 2 folders, 1 file
 
-	printf("Data Info:\n");
-	fseek(disk, BLOCK_SIZE * 11, SEEK_SET);
-    for (int i = 0; i < 3; i++) {
-        fread(&subDir[i], sizeof(DirectoryEntry), 1, disk);
-        printf("Data: %s\n", subDir[i].filename);
-    }   
+// 	printf("Data Info:\n");
+// 	fseek(disk, BLOCK_SIZE * 11, SEEK_SET);
+//     for (int i = 0; i < 3; i++) {
+//         fread(&subDir[i], sizeof(DirectoryEntry), 1, disk);
+//         printf("Data: %s\n", subDir[i].filename);
+//     }   
 
-	fclose(disk);
-}
+// 	fclose(disk);
+// }
 
 int main(void) {
 	// Mount the filesystem
