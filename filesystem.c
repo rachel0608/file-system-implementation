@@ -53,7 +53,7 @@ void print_subdir(DirectoryEntry* sub_dir) {
 }
 
 FileHandle* f_open(char* path, char* access) {
-	if (!check_access) {
+	if ((access != "r") && (access != "w") && (access != "a")) {
 		printf("ERROR: Invalid access type.\n");
 		return NULL;
 	}
