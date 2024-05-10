@@ -482,11 +482,11 @@ int main(void) {
 	print_subdir(opened_entry);
 	printf("opendir(/) done\n \n");
 
-	// printf("=== test: open folder1 dir ===\n");
-	// opened_entry = f_opendir("folder1");
-	// printf("opened directory: \n");
-	// print_subdir(opened_entry);
-	// printf("opendir(folder1) done\n \n");
+	printf("=== test: open folder1 dir ===\n");
+	opened_entry = f_opendir("folder1");
+	printf("opened directory: \n");
+	print_subdir(opened_entry);
+	printf("opendir(folder1) done\n \n");
 
 	// printf("=== test: open folder2 dir ===\n");
 	// opened_entry = f_opendir("folder2");
@@ -504,7 +504,7 @@ int main(void) {
 	// 	printf("opendir(file1) done\n \n");
 	// }
 
-	printf("===testing readdir on root ===\n");
+	printf("===testing readdir on folder1 ===\n");
 	Directory* sub_entries = f_readdir(opened_entry);
 	print_dir(sub_entries);
 
