@@ -317,8 +317,13 @@ DirectoryEntry* f_opendir(char* directory) {
 
 	// 	// check if the filename matches
 	// 	if (compare_filename(directory, sub_dir)) {
-	// 		printf("Directory opened: %s\n", directory);
-	// 		return sub_dir;
+	// 		if (sub_dir->type == 1){
+	// 			printf("Directory opened: %s\n", directory);
+	// 			return sub_dir;
+	// 		} else {
+	// 			printf("f_opendir: %s is not a directory \n", directory);
+	// 			return NULL;
+	// 		}
 	// 	} else {
 	// 		// move to the next DirectoryEntry
 	// 		bytes_count += sizeof(DirectoryEntry);
@@ -341,33 +346,35 @@ int f_closedir(DirectoryEntry* dir_entry) {
 // need to debug a bit - Cecilia
 Directory* f_readdir(DirectoryEntry* entry) {
 	// look into FAT[0], find a DirectoryEntry with the same filename
-	int bytes_count = 0;
+	// int bytes_count = 0;
 
 	// array of all dir entry
-	Directory* sub_dir_arr = (Directory*)malloc(sizeof(Directory));
-	DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-	int i = 0;
+	Directory* dir = (Directory*)malloc(sizeof(Directory));
+	dir = (Directory *) data_section[entry->first_logical_cluster].buffer;
+	
+	// DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+	// int i = 0;
 
-	while (bytes_count < BLOCK_SIZE) {
-		// retrieve the first 20 bytes of FAT[0]
-		memcpy(sub_dir, entry + bytes_count, sizeof(DirectoryEntry));
-		print_subdir(sub_dir);
+	// while (bytes_count < BLOCK_SIZE) {
+	// 	// retrieve the first 20 bytes of FAT[0]
+	// 	memcpy(sub_dir, entry + bytes_count, sizeof(DirectoryEntry));
+	// 	print_subdir(sub_dir);
 
-		// check if current entry is valid
-		if (strcmp(sub_dir->filename, "") == 0) {
-			printf("End of dir entry\n");
-			break;
-		}
+	// 	// check if current entry is valid
+	// 	if (strcmp(sub_dir->filename, "") == 0) {
+	// 		printf("End of dir entry\n");
+	// 		break;
+	// 	}
 
-		sub_dir_arr->entries[i] = *sub_dir;
+	// 	sub_dir_arr->entries[i] = *sub_dir;
 
-		// move to the next DirectoryEntry
-		bytes_count += sizeof(DirectoryEntry);
-		// printf("bytes_count: %d\n", bytes_count);
-		i++;
-	}
+	// 	// move to the next DirectoryEntry
+	// 	bytes_count += sizeof(DirectoryEntry);
+	// 	// printf("bytes_count: %d\n", bytes_count);
+	// 	i++;
+	// }
 
-	return sub_dir_arr; 
+	return dir; 
 }
 
 
@@ -471,8 +478,8 @@ int main(void) {
 
 	printf("=== test: open root dir ===\n");
 	DirectoryEntry* opened_entry = f_opendir("/");
-	// printf("opened directory: \n");
-	// print_subdir(opened_entry);
+	printf("opened directory: \n");
+	print_subdir(opened_entry);
 	printf("opendir(/) done\n \n");
 
 	// printf("=== test: open folder1 dir ===\n");
@@ -497,8 +504,10 @@ int main(void) {
 	// 	printf("opendir(file1) done\n \n");
 	// }
 
+	printf("===testing readdir on root ===\n");
 	Directory* sub_entries = f_readdir(opened_entry);
 	print_dir(sub_entries);
+
 	// FileHandle* fh = f_open("/file1.txt", "r");
 	// printf("HERE2\n");
 	// print_file_handle(fh);
