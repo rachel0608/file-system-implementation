@@ -11,6 +11,7 @@
 #define SEEK_CUR 1
 #define SEEK_END 2
 #define MAX_DIRS 100
+#define DIR_SIZE_CAP 26
 
 FileHandle* open_dirs[MAX_DIRS]; // All files that are open
 superblock sb;
@@ -23,8 +24,9 @@ int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per b
 
 // helper function to compare filename
 bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
-	printf("directory: %s\n", filename);
-	printf("subdir: %s\n", dir_entry->filename);
+	// printf("comparing dir/file names:\n");
+	// printf("given directory name: %s\n", filename);
+	// printf("subdir found: %s\n", dir_entry->filename);
 	//printf("ext: %s\n", dir_entry->ext);
 	// printf("type: %s\n", dir_entry->type);
 	// printf("first cluster: %s\n", dir_entry->first_logical_cluster);
@@ -64,6 +66,13 @@ void print_subdir(DirectoryEntry* sub_dir) {
 	printf("Extension: %s\n", sub_dir->ext);
 	printf("First logical cluster: %d\n", sub_dir->first_logical_cluster);
 	// printf("File size: %d\n\n", sub_dir->file_size);
+}
+
+// print a directory
+void print_dir(Directory* entry) {
+	for(int i = 0; i < DIR_SIZE_CAP; i++){
+		print_subdir(&entry->entries[i]);
+	}
 }
 
 void reformat_path(char* path) { // removes the file from dir path
@@ -271,10 +280,15 @@ void f_rewind(FileHandle* file) {
 // Currently open in root directory
 // Might fix to return a DIR struct instead of DirectoryEntry
 DirectoryEntry* f_opendir(char* directory) {
+	if (compare_filename(directory, &root_dir_entry)){
+		printf("Directory opened: %s\n", directory);
+		return &root_dir_entry;
+	}
+
 	// look into FAT[0], find a DirectoryEntry with the same filename
 	int bytes_count = 0;
 	DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-	
+
 	while (bytes_count < BLOCK_SIZE) {
 		// retrieve the first 20 bytes of FAT[0]
 		memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
@@ -287,10 +301,9 @@ DirectoryEntry* f_opendir(char* directory) {
 		} else {
 			// move to the next DirectoryEntry
 			bytes_count += sizeof(DirectoryEntry);
-			//printf("bytes_count: %d\n", bytes_count);
 		}
 	}
-
+	printf("f_opender: given directory not found. \n");
 	return NULL;
 }
 
@@ -305,7 +318,7 @@ int f_closedir(DirectoryEntry* dir_entry) {
 }
 
 // need to debug a bit - Cecilia
-Directory* f_readdir(DirectoryEntry entry) {
+Directory* f_readdir(DirectoryEntry* entry) {
 	// look into FAT[0], find a DirectoryEntry with the same filename
 	int bytes_count = 0;
 
@@ -316,7 +329,7 @@ Directory* f_readdir(DirectoryEntry entry) {
 
 	while (bytes_count < BLOCK_SIZE) {
 		// retrieve the first 20 bytes of FAT[0]
-		memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
+		memcpy(sub_dir, entry + bytes_count, sizeof(DirectoryEntry));
 		print_subdir(sub_dir);
 
 		// check if current entry is valid
@@ -408,7 +421,7 @@ void fs_mount(char *diskname) {
     printf("Root dir's first entry type: %d\n", root_dir->entries[0].type);
 	
 	fclose(disk);
-	printf("mounting done\n");
+	printf("mounting done\n \n");
 }
 
 void print_file_handle(FileHandle* fh) {
@@ -435,14 +448,29 @@ int main(void) {
 	fs_mount("fake_disk_3_folders.img");
 	// fs_mount("fake_disk.img");
 
-	// f_readdir("fake_disk.img");
-	// f_opendir("folder1");
-	f_opendir("/");
-	printf("HERE\n");
-	FileHandle* fh = f_open("/file1.txt", "r");
-	printf("HERE2\n");
-	print_file_handle(fh);
-	printf("HERE3\n");
+	printf("=== test: open root dir ===\n");
+	DirectoryEntry* opened_entry = f_opendir("/");
+	printf("opened directory: \n");
+	print_subdir(opened_entry);
+	printf("opendir(/) done\n \n");
+
+	printf("=== test: open folder1 dir ===\n");
+	opened_entry = f_opendir("folder1");
+	printf("opened directory: \n");
+	print_subdir(opened_entry);
+	printf("opendir(folder1) done\n \n");
+
+	printf("=== test: open folder_a dir ===\n");
+	opened_entry = f_opendir("folder_a");
+	printf("opened directory: \n");
+	print_subdir(opened_entry);
+	printf("opendir(folder_a) done\n \n");
+
+	// Directory* sub_entries = f_readdir(opened_entry);
+	// FileHandle* fh = f_open("/file1.txt", "r");
+	// printf("HERE2\n");
+	// print_file_handle(fh);
+	// printf("HERE3\n");
 	
 	// Open a file
 }

@@ -33,7 +33,7 @@ int f_remove(const char* path);
 // void f_rewind(FileHandle file);
 // int f_stat(FileHandle file, struct stat *buffer);
 DirectoryEntry* f_opendir(char* path);
-Directory* f_readdir(DirectoryEntry entry);
+Directory* f_readdir(DirectoryEntry* entry);
 // int f_closedir(DirectoryEntry* dir_entry);
 int f_mkdir(char* path);
 int f_rmdir(char* path);
