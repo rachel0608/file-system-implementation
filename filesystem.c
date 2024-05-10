@@ -26,6 +26,7 @@ bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
 	// printf("comparing dir/file names:\n");
 	// printf("given directory name: %s\n", filename);
 	// printf("subdir found: %s\n", dir_entry->filename);
+
 	//printf("ext: %s\n", dir_entry->ext);
 	// printf("type: %s\n", dir_entry->type);
 	// printf("first cluster: %s\n", dir_entry->first_logical_cluster);
@@ -289,8 +290,14 @@ DirectoryEntry* f_opendir(char* directory) {
 
 		// check if the filename matches
 		if (compare_filename(directory, sub_dir)) {
-			printf("Directory opened: %s\n", directory);
-			return sub_dir;
+			if (sub_dir->type == 1){
+				printf("Directory opened: %s\n", directory);
+				return sub_dir;
+			} else {
+				printf("f_opendir: %s is not a directory \n", directory);
+				return NULL;
+			}
+			
 		} 
 	}
 
@@ -463,17 +470,27 @@ int main(void) {
 	print_subdir(opened_entry);
 	printf("opendir(/) done\n \n");
 
-	printf("=== test: open folder1 dir ===\n");
-	opened_entry = f_opendir("folder1");
-	printf("opened directory: \n");
-	print_subdir(opened_entry);
-	printf("opendir(folder1) done\n \n");
+	// printf("=== test: open folder1 dir ===\n");
+	// opened_entry = f_opendir("folder1");
+	// printf("opened directory: \n");
+	// print_subdir(opened_entry);
+	// printf("opendir(folder1) done\n \n");
 
-	printf("=== test: open folder_a dir ===\n");
-	opened_entry = f_opendir("folder_a");
-	printf("opened directory: \n");
-	print_subdir(opened_entry);
-	printf("opendir(folder_a) done\n \n");
+	printf("=== test: open folder2 dir ===\n");
+	opened_entry = f_opendir("folder2");
+	if (opened_entry != NULL){
+		printf("opened directory: \n");
+		print_subdir(opened_entry);
+		printf("opendir(folder2) done\n \n");
+	}
+
+	printf("=== test: open file1.txt ===\n");
+	opened_entry = f_opendir("file1.txt");
+	if (opened_entry != NULL){
+		printf("opened directory: \n");
+		print_subdir(opened_entry);
+		printf("opendir(file1) done\n \n");
+	}
 
 	// Directory* sub_entries = f_readdir(opened_entry);
 	// FileHandle* fh = f_open("/file1.txt", "r");
