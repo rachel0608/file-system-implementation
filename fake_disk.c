@@ -192,7 +192,7 @@ void readData(FILE *disk) {
 	fseek(disk, BLOCK_SIZE * 11, SEEK_SET);
     for (int i = 0; i < 3; i++) {
         fread(&subDir[i], sizeof(DirectoryEntry), 1, disk);
-        printf("Data: %s\n", subDir[i].filename);
+        printf("Data: %s.%s\n", subDir[i].filename, subDir[i].ext);
     }   
 
 }
