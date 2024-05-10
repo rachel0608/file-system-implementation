@@ -11,7 +11,6 @@
 #define SEEK_CUR 1
 #define SEEK_END 2
 #define MAX_DIRS 100
-#define DIR_SIZE_CAP 26
 
 FileHandle* open_dirs[MAX_DIRS]; // All files that are open
 superblock sb;
@@ -68,9 +67,9 @@ void print_subdir(DirectoryEntry* sub_dir) {
 	// printf("File size: %d\n\n", sub_dir->file_size);
 }
 
-// print a directory
+// print all dir entries in a directory
 void print_dir(Directory* entry) {
-	for(int i = 0; i < DIR_SIZE_CAP; i++){
+	for(int i = 0; i < num_dir_per_block; i++){
 		print_subdir(&entry->entries[i]);
 	}
 }
@@ -284,25 +283,35 @@ DirectoryEntry* f_opendir(char* directory) {
 		printf("Directory opened: %s\n", directory);
 		return &root_dir_entry;
 	}
-
-	// look into FAT[0], find a DirectoryEntry with the same filename
-	int bytes_count = 0;
-	DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-
-	while (bytes_count < BLOCK_SIZE) {
-		// retrieve the first 20 bytes of FAT[0]
-		memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
-		//print_subdir(sub_dir);
+	for (int i = 0; i < num_dir_per_block; i++) {
+		DirectoryEntry* sub_dir = &root_dir->entries[i];
+		// print_subdir(sub_dir);
 
 		// check if the filename matches
 		if (compare_filename(directory, sub_dir)) {
 			printf("Directory opened: %s\n", directory);
 			return sub_dir;
-		} else {
-			// move to the next DirectoryEntry
-			bytes_count += sizeof(DirectoryEntry);
-		}
+		} 
 	}
+
+	// // look into FAT[0], find a DirectoryEntry with the same filename
+	// int bytes_count = 0;
+	// DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+
+	// while (bytes_count < BLOCK_SIZE) {
+	// 	// retrieve the first 20 bytes of FAT[0]
+	// 	memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
+	// 	//print_subdir(sub_dir);
+
+	// 	// check if the filename matches
+	// 	if (compare_filename(directory, sub_dir)) {
+	// 		printf("Directory opened: %s\n", directory);
+	// 		return sub_dir;
+	// 	} else {
+	// 		// move to the next DirectoryEntry
+	// 		bytes_count += sizeof(DirectoryEntry);
+	// 	}
+	// }
 	printf("f_opender: given directory not found. \n");
 	return NULL;
 }
