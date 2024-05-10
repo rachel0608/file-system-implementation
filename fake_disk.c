@@ -28,6 +28,7 @@ File size in blocks: 2048
 #define BLOCK_SIZE 512
 #define FAT_SIZE 8 // in blocks
 #define ROOT_DIR_SIZE 1
+#define ROOT_LOCATION 11
 
 void writeSuperblock(FILE *disk) {
     superblock sb;
@@ -60,18 +61,6 @@ void writeFAT(FILE *disk) {
     int fat_entry_count = FAT_SIZE * BLOCK_SIZE;
     FATEntry FAT[fat_entry_count];
     memset(FAT, 0, sizeof(FAT)); // init all FAT to 0
-
-    // folder1 contains folder_a
-    FAT[1].block_number = 5;
-    FAT[5].block_number = 0; // EOF
-
-    // Folder2 is empty
-    FAT[2].block_number = 0; // EOF
-
-    // Allocate blocks for file1.txt  
-    FAT[3].block_number = 4; // file1.txt
-    FAT[4].block_number = 0; // EOF
-
     fseek(disk, BLOCK_SIZE * 1, SEEK_SET); // FAT starts at block 1
     fwrite(&FAT, sizeof(FATEntry), fat_entry_count, disk);
 }
@@ -93,10 +82,10 @@ void writeBitmap(FILE *disk) {
     BitmapBlock bitmap;
     memset(bitmap.bitmap, 1, BLOCK_SIZE);
 
-    // Mark blocks 1-5 as used
-    for (int i = 1; i <= 5; i++) {
-        bitmap.bitmap[i] = 0;
-    }
+    // Mark blocks 2, 3, 5 as used
+    bitmap.bitmap[2] = 0;
+    bitmap.bitmap[3] = 0;   
+    bitmap.bitmap[5] = 0;   
 
     fseek(disk, BLOCK_SIZE * 9, SEEK_SET); // Bitmap starts at block 9
     fwrite(&bitmap, sizeof(BitmapBlock), 1, disk);
@@ -137,22 +126,22 @@ void readRootDir(FILE *disk) {
 void writeSubDir(FILE *disk) {
     DirectoryEntry subDir[3]; // 2 folders, 1 file
     
-    memcpy(subDir[0].filename, "folder1", 8);
+    memcpy(subDir[0].filename, "Desktop", 8);
     memcpy(subDir[0].ext, "", 3);
     subDir[0].first_logical_cluster = 1;
     subDir[0].file_size = 0;
     subDir[0].type = 1; // directory
 
-    memcpy(subDir[1].filename, "folder2", 8);
+    memcpy(subDir[1].filename, "Download", 8);
     memcpy(subDir[1].ext, "", 3);
-    subDir[1].first_logical_cluster = 2;
+    subDir[1].first_logical_cluster = 0;
     subDir[1].file_size = 0;
     subDir[1].type = 1; // directory
 
-    memcpy(subDir[2].filename, "file1", 8);
+    memcpy(subDir[2].filename, "Hello", 8);
     memcpy(subDir[2].ext, "txt", 3);
-    subDir[2].first_logical_cluster = 3;
-    subDir[2].file_size = 5;
+    subDir[2].first_logical_cluster = 2;
+    subDir[2].file_size = 7;
     subDir[2].type = 0; // file
 
     fseek(disk, BLOCK_SIZE * 11, SEEK_SET); // Subdirectories start at block 11
@@ -160,21 +149,47 @@ void writeSubDir(FILE *disk) {
 }
 
 void writeData(FILE *disk) {
-    // write data for folder1 in logical cluster 5
-    DirectoryEntry subDir[2];
-    memcpy(subDir[1].filename, "folder_a", 8); // folder1 stores folder_a
-    memcpy(subDir[1].ext, "", 3);
-    subDir[1].first_logical_cluster = 5;
-    subDir[1].file_size = 0;
-    subDir[1].type = 1; // directory
-    fseek(disk, BLOCK_SIZE * (11+1), SEEK_SET); 
-    fwrite(&subDir[1], sizeof(DirectoryEntry), 1, disk);
+    // write data for Desktop in logical cluster 1
+    // CS355
+    DirectoryEntry Desktop_subDir[2];
+    memcpy(Desktop_subDir[0].filename, "CS355", 8); 
+    memcpy(Desktop_subDir[0].ext, "", 3);
+    Desktop_subDir[0].first_logical_cluster = 4; // stores homework.txt
+    Desktop_subDir[0].file_size = 0;
+    Desktop_subDir[0].type = 1; 
+    // blog_1.txt
+    memcpy(Desktop_subDir[1].filename, "blog_1", 8);
+    memcpy(Desktop_subDir[1].ext, "txt", 3);
+    Desktop_subDir[1].first_logical_cluster = 3; 
+    Desktop_subDir[1].file_size = 15; // change later
+    Desktop_subDir[1].type = 0; 
+    fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+1), SEEK_SET); 
+    fwrite(&Desktop_subDir, sizeof(DirectoryEntry), 2, disk);
 
-    // write data for file1.txt in logical cluster 3
-    char data[BLOCK_SIZE] = "Hello";
-    int offset = 3 + 11; // file1.txt starts at logical block 3
-    fseek(disk, BLOCK_SIZE * offset, SEEK_SET); 
-    fwrite(&data, sizeof(char), BLOCK_SIZE, disk);
+    // write data for Hello.txt in logical cluster 2
+    char data1[BLOCK_SIZE] = "Hello~!";
+    fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+2), SEEK_SET); 
+    fwrite(&data1, sizeof(char), BLOCK_SIZE, disk);
+
+    // write data for blog_1.txt in logical cluster 3
+    char data2[BLOCK_SIZE] = "This is blog 1!";
+    fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+3), SEEK_SET);
+    fwrite(&data2, sizeof(char), BLOCK_SIZE, disk);
+
+    // write data for homework.txt in logical cluster 4
+    DirectoryEntry CS355_subDir[2];
+    memcpy(CS355_subDir[0].filename, "hw1", 8); 
+    memcpy(CS355_subDir[0].ext, "txt", 3);
+    CS355_subDir[0].first_logical_cluster = 5;
+    CS355_subDir[0].file_size = 9; 
+    CS355_subDir[0].type = 0; 
+    fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+4), SEEK_SET);
+    fwrite(&CS355_subDir, sizeof(DirectoryEntry), 1, disk);
+
+    // write data for hw1.txt in logical cluster 5
+    char data3[BLOCK_SIZE] = "1 + 1 = 2";
+    fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+5), SEEK_SET);
+    fwrite(&data3, sizeof(char), BLOCK_SIZE, disk);
 }
 
 // void readData(FILE *disk) {
@@ -199,7 +214,7 @@ void readData(FILE *disk) {
 
 int main() {
     // Create disk
-    FILE *disk = fopen("fake_disk_3_folders.img", "wb");
+    FILE *disk = fopen("fake_disk.img", "wb");
     if (disk == NULL) {
         printf("Error creating disk image.\n");
         return 1;
@@ -216,16 +231,16 @@ int main() {
     printf("Hardcoded disk created successfully.\n");
 
     // Read disk
-    disk = fopen("fake_disk_3_folders.img", "rb");
+    //disk = fopen("fake_disk.img", "rb");
 
-    readSuperblock(disk);
-    readFAT(disk);
-    readBitmap(disk);
-    readRootDir(disk);
-    readData(disk);
+    // readSuperblock(disk);
+    // readFAT(disk);
+    // readBitmap(disk);
+    // readRootDir(disk);
+    // readData(disk);
 
-    fclose(disk);
+    // fclose(disk);
 
-    printf("Hardcoded disk read successfully.\n");
+    // printf("Hardcoded disk read successfully.\n");
     return 0;
 }
