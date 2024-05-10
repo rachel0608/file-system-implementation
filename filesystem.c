@@ -349,7 +349,7 @@ Directory* f_readdir(DirectoryEntry* entry) {
 		print_subdir(sub_dir);
 
 		// check if current entry is valid
-		if (sub_dir->filename == NULL) {
+		if (strcmp(sub_dir->filename, "") == 0) {
 			printf("End of dir entry\n");
 			break;
 		}
@@ -476,23 +476,23 @@ int main(void) {
 	// print_subdir(opened_entry);
 	// printf("opendir(folder1) done\n \n");
 
-	printf("=== test: open folder2 dir ===\n");
-	opened_entry = f_opendir("folder2");
-	if (opened_entry != NULL){
-		printf("opened directory: \n");
-		print_subdir(opened_entry);
-		printf("opendir(folder2) done\n \n");
-	}
+	// printf("=== test: open folder2 dir ===\n");
+	// opened_entry = f_opendir("folder2");
+	// if (opened_entry != NULL){
+	// 	printf("opened directory: \n");
+	// 	print_subdir(opened_entry);
+	// 	printf("opendir(folder2) done\n \n");
+	// }
 
-	printf("=== test: open file1.txt ===\n");
-	opened_entry = f_opendir("file1.txt");
-	if (opened_entry != NULL){
-		printf("opened directory: \n");
-		print_subdir(opened_entry);
-		printf("opendir(file1) done\n \n");
-	}
+	// printf("=== test: open file1.txt ===\n");
+	// opened_entry = f_opendir("file1.txt");
+	// if (opened_entry != NULL){
+	// 	printf("opened directory: \n");
+	// 	print_subdir(opened_entry);
+	// 	printf("opendir(file1) done\n \n");
+	// }
 
-	// Directory* sub_entries = f_readdir(opened_entry);
+	Directory* sub_entries = f_readdir(opened_entry);
 	// FileHandle* fh = f_open("/file1.txt", "r");
 	// printf("HERE2\n");
 	// print_file_handle(fh);
