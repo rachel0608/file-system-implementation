@@ -25,7 +25,9 @@ int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per b
 bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
 	printf("directory: %s\n", filename);
 	printf("subdir: %s\n", dir_entry->filename);
-	printf("ext: %s\n", dir_entry->ext);
+	//printf("ext: %s\n", dir_entry->ext);
+	// printf("type: %s\n", dir_entry->type);
+	// printf("first cluster: %s\n", dir_entry->first_logical_cluster);
     // if the entry is a directory
     if (dir_entry->type == 1) {
 		return strcmp(filename, dir_entry->filename) == 0;
@@ -406,6 +408,7 @@ void fs_mount(char *diskname) {
     printf("Root dir's first entry type: %d\n", root_dir->entries[0].type);
 	
 	fclose(disk);
+	printf("mounting done\n");
 }
 
 void print_file_handle(FileHandle* fh) {
@@ -433,7 +436,8 @@ int main(void) {
 	// fs_mount("fake_disk.img");
 
 	// f_readdir("fake_disk.img");
-	f_opendir("folder1");
+	// f_opendir("folder1");
+	f_opendir("/");
 	printf("HERE\n");
 	FileHandle* fh = f_open("/file1.txt", "r");
 	printf("HERE2\n");
