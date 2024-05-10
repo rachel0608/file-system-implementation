@@ -10,7 +10,9 @@ run with specified size: format <filename> -s <num MB requested>
 
 output: a disk image called <filename> will be created in your current directory
         on first run (if disk image/file does not already exist) format will create a          new empty disk, populated root dir with "/" and "."
-        format.c does not yet suppport an existing disk image/file
+        format.c only supports formatting an empty disk
+
+Layout: superblock (1 block) (index 0) | FAT (8 blocks for 1MB) (index 1-8) | FREEMAP (1 block for 1MB) (index 9) | ROOTDIR (1 block) (index 10) | DATA (11 reserved, start at 12)
         
 void fs_mount(char *diskname)
 ====================================================================================
