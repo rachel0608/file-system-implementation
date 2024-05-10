@@ -61,7 +61,7 @@ bool compare_cluster(const char* filename, const DirectoryEntry* dir_entry) {
 
 // print a subdirectory
 void print_subdir(DirectoryEntry* sub_dir) {
-	if(strcmp(sub_dir->filename, "") == 0){
+	if(strcmp(sub_dir->filename, "") != 0){
 		printf("Subdirectory Info:\n");
 		printf("Filename: %s\n", sub_dir->filename);
 		printf("Extension: %s\n", sub_dir->ext);
@@ -363,7 +363,7 @@ Directory* f_readdir(DirectoryEntry* entry) {
 
 		// move to the next DirectoryEntry
 		bytes_count += sizeof(DirectoryEntry);
-		printf("bytes_count: %d\n", bytes_count);
+		// printf("bytes_count: %d\n", bytes_count);
 		i++;
 	}
 
