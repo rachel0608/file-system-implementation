@@ -12,7 +12,7 @@
 #define SEEK_END 2
 #define MAX_DIRS 100
 
-FileHandle* open_dirs[MAX_DIRS]; // All files that are open
+FileHandle* opened_dirs[MAX_DIRS] = { NULL }; // All files that are open
 superblock sb;
 FATEntry *FAT;
 BitmapBlock bitmap;
@@ -61,7 +61,7 @@ bool compare_cluster(const char* filename, const DirectoryEntry* dir_entry) {
 
 // print a subdirectory
 void print_subdir(DirectoryEntry* sub_dir) {
-	if(strcmp(sub_dir->filename, "") != 0){
+	if (strcmp(sub_dir->filename, "") != 0) {
 		printf("Subdirectory Info:\n");
 		printf("Filename: %s\n", sub_dir->filename);
 		printf("Extension: %s\n", sub_dir->ext);
@@ -74,6 +74,18 @@ void print_subdir(DirectoryEntry* sub_dir) {
 void print_dir(Directory* entry) {
 	for(int i = 0; i < num_dir_per_block; i++){
 		print_subdir(&entry->entries[i]);
+	}
+}
+
+// print a subdirectory
+void print_filehandle(FileHandle* file) {
+	if (file != NULL) {
+		printf("FileHandle Info:\n");
+		printf("Absolute Path: %s\n", file->abs_path);
+		printf("File Descriptor: %d\n", file->file_desc);
+		printf("File Access Type: %s\n", file->access);
+		printf("File Position: %d\n", file->position);
+		printf("File Size: %d\n\n", file->file_size);
 	}
 }
 
@@ -102,8 +114,6 @@ FileHandle* f_open(char* path, char* access) {
 		return NULL;
 	}
 
-	printf("HERE4\n");
-
 	// check user permission -- if user can R, then cannot W
 	// if user cannot R or W, then just return null
 	// For now not done since we don't have user type id
@@ -113,51 +123,28 @@ FileHandle* f_open(char* path, char* access) {
 	strncpy(new_path, path, sizeof(new_path) - 1);
 	reformat_path(new_path);
 
-	printf("\nHERE5\n");
 	printf("Path: %s\n", path);
 	printf("Reformatted Path: %s\n", new_path);
 
 	DirectoryEntry* open_entry = f_opendir(new_path);
+	Directory* all_dirs = f_readdir(open_entry);
 
-	if (open_entry == NULL) {
-		printf("ERROR: File at this path not found - %s\n", new_path);
-		return NULL; 
-	}
-
-	// check if this file exists in the give path
-	// if yes, just return file handle
-	// if not, then create a new file handle and return
-	// look into FAT[0], find a DirectoryEntry with the same filename
-	int bytes_count = 0;
-	DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-	
-	while (bytes_count < BLOCK_SIZE) {
-		// retrieve the first 20 bytes of FAT[0]
-		memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
-		print_subdir(sub_dir);
-
+	for (int i = 0; i < num_dir_per_block; i++) {
 		// check if the filename matches
-		if (strcmp(open_entry->filename, sub_dir->filename) == 0) {
+		DirectoryEntry* dir = &all_dirs->entries[i];
+		
+		if ((strcmp(dir->filename, "") != 0) && (strcmp(open_entry->filename, dir->filename) == 0)) {
 			printf("Directory opened: %s\n", open_entry->filename);
 
-			int i = 0;
-
-			while (open_dirs[i]) {
-				if (strcmp(open_dirs[i]->abs_path, path) == 0) {
-					open_dirs[i] = NULL;
-					i++;
+			for (int j = 0; j < MAX_DIRS; j++) {
+				printf("YAYEET    %s\n", opened_dirs[j]->abs_path);
+				if ((opened_dirs[i] != NULL) && (strcmp(opened_dirs[j]->abs_path, path) == 0)) {
+					printf("HELLLOO ARGH\n");
+					return opened_dirs[i];
 				}
 			}
-
-			return open_dirs[i];
-		} else {
-			// move to the next DirectoryEntry
-			bytes_count += sizeof(DirectoryEntry);
-			printf("bytes_count: %d\n", bytes_count);
 		}
 	}
-
-	free(sub_dir);
 
 	FileHandle* file = (FileHandle*)malloc(sizeof(FileHandle));
 	file->abs_path = path;
@@ -165,14 +152,22 @@ FileHandle* f_open(char* path, char* access) {
 	file->access = access;
 	file->position = 0;
 
-	int j = 0;
-
-	while (open_dirs[j] != NULL) {
-		j++;
+	int index = -1;
+	for (int i = 0; i < MAX_DIRS; i++) {
+		if (opened_dirs[i] == NULL) {
+			index = i;
+			break;
+		}
 	}
 
-	open_dirs[j] = file;
-	return file;
+	// Checking if there's space in the array
+	if (index != -1) {
+		opened_dirs[index] = file;
+		// printf("FileHandle added successfully at index %d\n", index);
+		return file;
+	}
+
+	return NULL;
 }
 
 int f_close(FileHandle* file) {
@@ -184,9 +179,9 @@ int f_close(FileHandle* file) {
 	int i = 0;
 	int closed = 0;
 
-	while (open_dirs[i]) {
-		if (strcmp(open_dirs[i]->abs_path, file->abs_path) == 0) {
-			open_dirs[i] = NULL;
+	while (opened_dirs[i]) {
+		if (strcmp(opened_dirs[i]->abs_path, file->abs_path) == 0) {
+			opened_dirs[i] = NULL;
 			closed = 1;
 		}
 
@@ -509,19 +504,22 @@ int main(void) {
 	// Mount fake_disk.img
 	fs_mount("./disks/fake_disk.img");
 
-	printf("=== test: open root dir ===\n");
+	// *****
+	// Testing for f_opendir():
+
+	printf("=== testing f_opendir open root dir ===\n");
 	DirectoryEntry* opened_root = f_opendir("/");
 	printf("opened directory: \n");
 	print_subdir(opened_root);
 	printf("opendir(/) done\n \n");
 
-	printf("=== test: open Desktop dir ===\n");
+	printf("=== testing f_opendir open Desktop dir ===\n");
 	DirectoryEntry* opened_desktop = f_opendir("Desktop");
 	printf("opened directory: \n");
 	print_subdir(opened_desktop);
 	printf("opendir(Desktop) done\n \n");
 
-	printf("=== test: open Download dir ===\n");
+	printf("=== testing f_opendir open Download dir ===\n");
 	DirectoryEntry* opened_download = f_opendir("Download");
 	if (opened_download != NULL){
 		printf("opened directory: \n");
@@ -529,7 +527,7 @@ int main(void) {
 		printf("opendir(Download) done\n \n");
 	}
 
-	printf("\n=== test: open Hello.txt ===\n");
+	printf("\n=== testing f_opendir open Hello.txt ===\n");
 	DirectoryEntry* opened_hello = f_opendir("Hello.txt");
 	if (opened_hello != NULL){
 		printf("opened directory: \n");
@@ -537,15 +535,42 @@ int main(void) {
 		printf("opendir(Hello.txt) done\n \n");
 	}
 
-	printf("\n=== testing readdir on Desktop ===\n");
+	// *****
+	// Testing for f_readdir():
+
+	printf("\n=== testing f_readdir on Desktop ===\n");
 	Directory* sub_entries = f_readdir(opened_desktop);
 	print_dir(sub_entries);
 
-	printf("\n=== testing readdir on root ===\n");
+	printf("\n=== testing f_readdir on root ===\n");
 	sub_entries = f_readdir(opened_root);
 	print_dir(sub_entries);
 
-	printf("\n=== testing f_read on Hello.txt (file size = 7)===\n");
+	// *****
+	// Testing for f_open():
+
+	printf("\n=== testing f_open on Hello.txt ===\n");
+	// char buffer[20];
+	FileHandle* file = f_open("/Hello.txt", "r");
+	print_filehandle(file);
+
+	FileHandle* file2 = f_open("/Hello.txt", "r");
+	print_filehandle(file2);
+
+	// printf("\n=== testing f_open on blog_1.txt ===\n");
+	// // char buffer[20];
+	// file = f_open("/Desktop/blog_1.txt", "r");
+	// print_filehandle(file);
+
+	// printf("\n=== testing f_open on hw1.txt ===\n");
+	// // char buffer[20];
+	// file = f_open("/Desktop/CS355", "r");
+	// print_filehandle(file);
+
+	// *****
+	// Testing for f_read():
+	
+	printf("\n=== testing f_read on Hello.txt ===\n");
 	char buffer[20];
 	printf("Attempting to read 7 bytes\n");
 	int bytes = f_read(NULL, buffer, 7);
