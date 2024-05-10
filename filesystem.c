@@ -91,6 +91,9 @@ void reformat_path(char* path) { // removes the file from dir path
 }
 
 FileHandle* f_open(char* path, char* access) {
+	// Call fopendir, then get the return value of fopendir and feed it into freaddir
+	// then get the return value and go through these directory structs and find the
+	// path specified/ compare filenames
 	if ((access != "r") && (access != "w") && (access != "a") &&
 		(access != "r+")) {
 		printf("ERROR: Invalid access type.\n");
