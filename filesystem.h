@@ -25,7 +25,7 @@ typedef struct {
 } FileHandle; // FileHandle loosely based on Unix systems’s FileHandle (may not need?)
 
 FileHandle* f_open(char* path, char* access); // access = w/w+, r/r+, a/a+ maybe add group later as param
-int f_read(FileHandle file, void* buffer, size_t bytes);
+int f_read(FileHandle *file, void* buffer, int bytes);
 int f_write(FileHandle file, void* buffer, size_t bytes);
 int f_close(FileHandle* file);
 int f_seek(FileHandle* file, long offset, int whence);
