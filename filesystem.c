@@ -61,11 +61,13 @@ bool compare_cluster(const char* filename, const DirectoryEntry* dir_entry) {
 
 // print a subdirectory
 void print_subdir(DirectoryEntry* sub_dir) {
-	printf("Subdirectory Info:\n");
-	printf("Filename: %s\n", sub_dir->filename);
-	printf("Extension: %s\n", sub_dir->ext);
-	printf("First logical cluster: %d\n", sub_dir->first_logical_cluster);
-	// printf("File size: %d\n\n", sub_dir->file_size);
+	if(strcmp(sub_dir->filename, "") == 0){
+		printf("Subdirectory Info:\n");
+		printf("Filename: %s\n", sub_dir->filename);
+		printf("Extension: %s\n", sub_dir->ext);
+		printf("First logical cluster: %d\n", sub_dir->first_logical_cluster);
+		// printf("File size: %d\n\n", sub_dir->file_size);
+	}
 }
 
 // print all dir entries in a directory
@@ -469,8 +471,8 @@ int main(void) {
 
 	printf("=== test: open root dir ===\n");
 	DirectoryEntry* opened_entry = f_opendir("/");
-	printf("opened directory: \n");
-	print_subdir(opened_entry);
+	// printf("opened directory: \n");
+	// print_subdir(opened_entry);
 	printf("opendir(/) done\n \n");
 
 	// printf("=== test: open folder1 dir ===\n");
@@ -496,6 +498,7 @@ int main(void) {
 	// }
 
 	Directory* sub_entries = f_readdir(opened_entry);
+	print_dir(sub_entries);
 	// FileHandle* fh = f_open("/file1.txt", "r");
 	// printf("HERE2\n");
 	// print_file_handle(fh);
