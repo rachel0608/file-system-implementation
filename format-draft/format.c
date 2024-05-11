@@ -20,7 +20,7 @@
 #define CEIL_ROUNDING 1
 #define KB_IN_MB 1024.0
 #define FREEBLOCK 65535
-#define EOF 0
+#define END_OF_FILE 0
 #define ROOTDIR 0
 #define BITS_PER_BLOCK (BLOCKSIZE * 8)
 #define DIR_SIZE_CAP 26
@@ -143,7 +143,7 @@ void initialize_fat(FILE *disk_image, superblock sb) {
     for (int i = 0; i < num_blocks; i++) {
         fat_table[i].block_number = FREEBLOCK;
     }
-    fat_table[ROOTDIR].block_number = EOF; //first block is reserved for the root dir
+    fat_table[ROOTDIR].block_number = END_OF_FILE; //first block is reserved for the root dir
 
     // Write FAT to disk
     fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
@@ -224,7 +224,7 @@ void test_readfat(FILE *disk_image, superblock sb) {
     fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
     fread(fat_entries, sb.file_size_blocks * sizeof(FATEntry), 1, disk_image);
 
-    for (int i = 0; i < sb.file_size_blocks; i++) {
+    for (int i = 0; i < (int) sb.file_size_blocks; i++) {
         printf("fat cell %d: %d\n", i, fat_entries[i].block_number);
     }
 
@@ -242,7 +242,7 @@ void test_fat_end_of_chain(FILE *disk_image, superblock sb) {
     int start_cluster = 2000;
     int current_cluster = start_cluster;
 
-    while (fat_entries[current_cluster].block_number != EOF) {
+    while (fat_entries[current_cluster].block_number != END_OF_FILE) {
         current_cluster = fat_entries[current_cluster].block_number;
         printf("Next cluster in chain: %d\n", current_cluster);
     }
@@ -271,7 +271,7 @@ void test_cluster_allocation(FILE *disk_image, superblock sb) {
     // Allocate clusters for a new file (chain them in FAT)
     while (current_cluster < sb.file_size_blocks) {
         if (fat_entries[current_cluster].block_number == FREEBLOCK) {
-            fat_entries[current_cluster].block_number = EOF;
+            fat_entries[current_cluster].block_number = END_OF_FILE;
             break;
         }
         current_cluster++;
