@@ -18,7 +18,7 @@
 #define FAIL -1
 #define MAX_INPUT_SIZE 1024
 #define DELIMITERS " ;\t\n"
-#define MAX_PATH_LENGTH 1024
+#define MAX_PATH_LENGTH 2048
 #define MAX_DIR_LENGTH 8
 #define MAX_EXT_LENGTH 3
 
@@ -31,14 +31,21 @@
 #define PAGE_SIZE 20
 
 int interrupted = 0;
+char current_directory[MAX_PATH_LENGTH];
 
-void handle_sigint(int sig) {
+void handle_sigint() {
     interrupted = 1;
 }
 
 // lists all the files in the current or specified directory
 void my_ls(char **args, int l_flag, int F_flag) {
     char *path = ".";  // Default to current directory
+    if (l_flag == 1){
+        printf("-l found\n");
+    }
+    if (F_flag == 1){
+        printf("-F found\n");
+    }
 
     if (args[1] != NULL) {
         path = args[1];  // Use the provided directory path
@@ -58,26 +65,57 @@ void my_ls(char **args, int l_flag, int F_flag) {
 
     // TODO: handle flags
     
-    // Read and print each directory entry
+    // read and print each directory entry
     while ((entry = readdir(dir)) != NULL) {
-        // Ignore current and previous directory (. and ..)
+        // ignore current and previous directory (. and ..)
         if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
             printf("%s\n", entry->d_name);
         }
     }
 
-    // Close the directory
     closedir(dir);
 }
 
-void my_cd(const char *path, char **args) {
-    // check if args[1] contain “.” or “..”
-    // if no arg, go to root directory
-    // else check valid args: 
-    // if len(args[1]) > 8, return -1 (name too long)
-    // if given dir not found, return -1, print error
-    // else, go to specified directory 
-    // no return
+// change current working directory
+void my_cd(char **args) {
+    if (args[1] == NULL) {
+        // no argument, set to root directory
+        if (chdir("/") == 0) {
+            strcpy(current_directory, "/");
+        } else {
+            perror("chdir");
+        }
+    } else {
+        if (strcmp(args[1], ".") == 0) {
+            // current directory
+            return;
+        } else if (strcmp(args[1], "..") == 0) {
+            // parent directory
+            if (chdir("..") == 0) {
+                char *last_slash = strrchr(current_directory, '/');
+                if (last_slash != NULL && last_slash != current_directory) {
+                    *last_slash = '\0';
+                } else {
+                    strcpy(current_directory, "/");
+                }
+            } else {
+                perror("chdir");
+            }
+        } else {
+            // specified directory
+            if (chdir(args[1]) == 0) {
+                if (args[1][0] == '/') {
+                    // absolute path
+                    strcpy(current_directory, args[1]);
+                } else {
+                    // relative path
+                    snprintf(current_directory, sizeof(current_directory), "%s/%s", current_directory, args[1]);
+                }
+            } else {
+                perror("chdir");
+            }
+        }
+    }
 }
 
 // prints the current working directory to terminal
@@ -134,8 +172,6 @@ int my_rmdir(char **args) {
 }
 
 // deletes a file
-
-
 int my_rm(char **args) {
     if (args[1] == NULL) {
         fprintf(stderr, "rm: missing operand\n");
@@ -229,16 +265,74 @@ int my_more(char **args) {
 
 // changes the permissions mode of a file
 // supports absolute mode and symbolic mode
-int my_chmod(const char *path, char **args) {
-    // args[1] = mode & permission details (parse args[1] to set mode)
-    // args[2] = file name
-    // return -1 if fail
-    // return 1 if done
-}
+void my_chmod(char **args) {
+    if (args[1] == NULL || args[2] == NULL) {
+        printf("Usage: chmod <mode> <file>\n");
+        return;
+    }
 
-// function to translate relative address to absolute
-char *relative_to_absolute(char *relative_path, char *current_directory) {
-    // return a char of absolute address
+    char *mode = args[1];
+    char *file = args[2];
+
+    // parse mode
+    int permissions = 0;
+    if (mode[0] >= '0' && mode[0] <= '7') {
+        // absolute mode
+        permissions = strtol(mode, NULL, 8);
+    } else {
+        // symbolic mode
+        int i = 0;
+        while (mode[i] != '\0') {
+            char *p = strchr("ugoa", mode[i]);
+            if (p != NULL) {
+                int mask = 0;
+                if (*p == 'u') {
+                    mask = S_IRWXU;
+                } else if (*p == 'g') {
+                    mask = S_IRWXG;
+                } else if (*p == 'o') {
+                    mask = S_IRWXO;
+                } else if (*p == 'a') {
+                    mask = S_IRWXU | S_IRWXG | S_IRWXO;
+                }
+
+                i++;
+                char op = mode[i];
+                i++;
+
+                if (op == '+' || op == '-' || op == '=') {
+                    int perm = 0;
+                    while (mode[i] != ',' && mode[i] != '\0') {
+                        if (mode[i] == 'r') {
+                            perm |= S_IRUSR | S_IRGRP | S_IROTH;
+                        } else if (mode[i] == 'w') {
+                            perm |= S_IWUSR | S_IWGRP | S_IWOTH;
+                        } else if (mode[i] == 'x') {
+                            perm |= S_IXUSR | S_IXGRP | S_IXOTH;
+                        }
+                        i++;
+                    }
+
+                    if (op == '+') {
+                        permissions |= (perm & mask);
+                    } else if (op == '-') {
+                        permissions &= ~(perm & mask);
+                    } else if (op == '=') {
+                        permissions = (permissions & ~mask) | (perm & mask);
+                    }
+                }
+            }
+
+            if (mode[i] == ',') {
+                i++;
+            }
+        }
+    }
+
+    // change the file permissions
+    if (chmod(file, permissions) == -1) {
+        perror("chmod");
+    }
 }
 
 void child_handler(int signum, siginfo_t *info, void *context){
@@ -258,8 +352,8 @@ void child_handler(int signum, siginfo_t *info, void *context){
         waitpid(pid, &status, WNOHANG);
     }
     if(info->si_code == CLD_CONTINUED){
-        // printf("(Resumed)\n");
-        struct termios setting;
+        printf("(Resumed)\n");
+        // struct termios setting;
 	}
     if(info->si_code == CLD_STOPPED){
         kill(pid, SIGSTOP);
@@ -337,29 +431,27 @@ void execute_command(char *command_line) {
     if (strcmp(args[0], "ls") == 0) {
         printf("l flag: %d\n", ls_l_flag);
         printf("F flag: %d\n", ls_F_flag);
-        my_ls(&args, ls_l_flag, ls_F_flag);
+        my_ls(args, ls_l_flag, ls_F_flag);
         // TODO: support redirection and flags
     } else if (strcmp(args[0], "cd") == 0) {
-        printf("command: cd\n");
-        // my_cd(path, args + 1);
+        my_cd(args);
     } else if (strcmp(args[0], "pwd") == 0) {
         my_pwd();
         // TODO: support redirection
     } else if (strcmp(args[0], "mkdir") == 0) {
-        my_mkdir(&args);
+        my_mkdir(args);
     } else if (strcmp(args[0], "rmdir") == 0) {
-        my_rmdir(&args);
+        my_rmdir(args);
     } else if (strcmp(args[0], "rm") == 0) {
-        my_rm(&args);
+        my_rm(args);
     } else if (strcmp(args[0], "cat") == 0) {
-        my_cat(&args);
+        my_cat(args);
         // TODO: support redirection
     } else if (strcmp(args[0], "more") == 0) {
-        printf("command: more\n");
-        my_more(&args);
+        my_more(args);
         // TODO: support redirection
     } else if (strcmp(args[0], "chmod") == 0) {
-        printf("command: chmod\n");
+        printf("sorry, chmod is not available right now.\n");
         // my_chmod(&args);
     } else {
 
@@ -461,8 +553,7 @@ int main() {
         }
 
         // get command
-
-        input = readline("${username}> "); // TODO: keep track of username
+        input = readline("${username} > "); // TODO: keep track of username
         
         if (!input){
             printf("\n");
