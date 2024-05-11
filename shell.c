@@ -27,6 +27,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #define CAT_BUFFER_SIZE 1024
+#define BUFFER_SIZE 1024
+#define PAGE_SIZE 20
 
 int interrupted = 0;
 
@@ -132,7 +134,7 @@ int my_rmdir(char **args) {
 }
 
 // deletes a file
-#define CAT_BUFFER_SIZE 1024
+
 
 int my_rm(char **args) {
     if (args[1] == NULL) {
@@ -178,9 +180,6 @@ int my_cat(char **args) {
 }
 
 // lists a file a screen at a time
-#define BUFFER_SIZE 1024
-#define PAGE_SIZE 20
-
 int my_more(char **args) {
     if (args[1] == NULL) {
         fprintf(stderr, "more: missing operand\n");
@@ -336,46 +335,32 @@ void execute_command(char *command_line) {
 
     // handle built-in commands
     if (strcmp(args[0], "ls") == 0) {
-        printf("command: ls\n");
         printf("l flag: %d\n", ls_l_flag);
         printf("F flag: %d\n", ls_F_flag);
         my_ls(&args, ls_l_flag, ls_F_flag);
-        // TODO: support redirection
+        // TODO: support redirection and flags
     } else if (strcmp(args[0], "cd") == 0) {
         printf("command: cd\n");
-        // char path = my_pwd();
         // my_cd(path, args + 1);
     } else if (strcmp(args[0], "pwd") == 0) {
-        // my_pwd();
-        printf("command: pwd\n");
+        my_pwd();
         // TODO: support redirection
     } else if (strcmp(args[0], "mkdir") == 0) {
-        printf("command: mkdir\n");
-        // char path = my_pwd();
-        // my_mkdir(path, args + 1);
+        my_mkdir(&args);
     } else if (strcmp(args[0], "rmdir") == 0) {
-        printf("command: rmdir\n");
-        // char path = my_pwd();
-        // my_rmdir(path, args + 1);
+        my_rmdir(&args);
     } else if (strcmp(args[0], "rm") == 0) {
-        printf("command: rm\n");
-        // char path = my_pwd();
-        // my_rm(path, args + 1);
+        my_rm(&args);
     } else if (strcmp(args[0], "cat") == 0) {
-        printf("command: cat\n");
-        // char path = my_pwd();
-        // my_cat(path, args + 1);
+        my_cat(&args);
         // TODO: support redirection
     } else if (strcmp(args[0], "more") == 0) {
         printf("command: more\n");
-        // char path = my_pwd();
-        // my_more(path, args + 1);
+        my_more(&args);
         // TODO: support redirection
     } else if (strcmp(args[0], "chmod") == 0) {
         printf("command: chmod\n");
-        // char path = my_pwd();
-        // my_chmod(path, args + 1);
-
+        // my_chmod(&args);
     } else {
 
         // start a child process to execute normal command
