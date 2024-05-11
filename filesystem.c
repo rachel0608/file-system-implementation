@@ -20,6 +20,7 @@
 #define SEEK_END 2
 #define MAX_DIRS 100
 #define EMPTY 65535 // first_logical_cluster value for empty directory
+#define END_OF_FILE 0 // FAT entry value for end of file
 
 FileHandle* opened_dirs[MAX_DIRS] = { NULL }; // All files that are open
 superblock sb;
@@ -365,11 +366,28 @@ Directory* f_readdir(DirectoryEntry* entry) {
 	return dir; 
 }
 
+// helper func to read 1 block of data
+char* read_block(int cluster) {
+	if (cluster < 0 || cluster >= sb.file_size_blocks) {
+		printf("ERROR: Block number is out of bounds.\n");
+		return NULL;
+	}
+
+	int bytes_read = strlen(data_section[cluster].buffer);
+	char* buffer = (char*)malloc(bytes_read);
+	memcpy(buffer, data_section[cluster].buffer, bytes_read);
+	
+	return buffer;
+}
+
 // read the contents of a file
 int f_read(FileHandle *file, void* buffer, int bytes) {
 	int first_logical_cluster = 3; // file->first_logical_cluster when open() works properly
-	int file_size = 15; // file->file_size when open() works properly
-	int result = 0;
+	int file_size = 56; // file->file_size when open() works properly
+
+	// int first_logical_cluster = file->first_logical_cluster;
+	// printf("first_logical_cluster: %d\n", first_logical_cluster);
+	// int file_size = file->file_size;
 
 	if (buffer == NULL) {
         printf("Error: Buffer pointer is NULL.\n");
@@ -393,7 +411,7 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 	// 	return 0; // Return 0 bytes read
 	// }
 
-	// if (file->access != "r") {
+	// if (strcmp(file->access, "r") != 0 && strcmp(file->access, "r+") != 0) {
 	// 	printf("Error: File is not open for reading.\n");
 	// 	return -1; // Return error code
 	// }
@@ -403,14 +421,48 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
         bytes = file_size; 
     }
 
-	for (int i = 0; i < bytes; i++) {
-		((char*)buffer)[i] = data_section[first_logical_cluster].buffer[i];
-		result++;
+	// Traverse through the FAT to read the file
+	int current_cluster = first_logical_cluster;
+	int bytes_read = 0;
+	int bytes_remaining = bytes;
+
+	int i = 0;
+	printf("Traversing FAT to read file contents...\n");
+	while (bytes_remaining > 0) {
+		// Read the current cluster
+		char* data = read_block(current_cluster);
+		int data_size = strlen(data);
+		printf("Data block %d: %s - (size: %d)\n", i, data, data_size);
+
+		// Calculate the number of bytes to read from the current cluster
+		int bytes_to_read = (bytes_remaining < data_size) ? bytes_remaining : data_size;
+
+		// Copy the data into the buffer
+		memcpy(buffer + bytes_read, data, bytes_to_read);
+
+		// Update the number of bytes read and remaining
+		bytes_read += bytes_to_read;
+		bytes_remaining -= bytes_to_read;
+
+		// Move to the next cluster
+		current_cluster = FAT[current_cluster].block_number;
+
+		if (current_cluster == END_OF_FILE) {
+			break;
+		}
+
+		i++;
 	}
 
+	// Add null terminator to the buffer
 	((char*)buffer)[bytes] = '\0';
 
-	return result;
+	// Update the file position
+	// file->position += bytes_read;
+
+	printf("Successfully read %d bytes from the file.\n", bytes_read);
+
+	return bytes_read;
 }
 
 // to be called before the mainloop
@@ -584,9 +636,9 @@ void test_read_disk_1() {
 	printf("GRACEEE~~\n");
 
 	// FEED IN THE FILE HANDLE FROM F_OPEN
-	printf("\n2. Read 15 bytes (file size)\n");
-	char buffer[16];
-	int bytes = f_read(NULL, buffer, 16);
+	printf("\n2. Read 56 bytes (file size)\n");
+	char buffer[512];
+	int bytes = f_read(NULL, buffer, 56);
 	printf("Bytes read: %d\n", bytes);
 	printf("Buffer: %s\n", buffer);
 
@@ -595,8 +647,8 @@ void test_read_disk_1() {
 	printf("Bytes read: %d\n", bytes);
 	printf("Buffer: %s\n", buffer);
 
-	printf("\n4. Attempt to read 1000 bytes (file size exceeded)\n");
-	bytes = f_read(NULL, buffer, 1000);
+	printf("\n4. Attempt to read 100 bytes (file size exceeded)\n");
+	bytes = f_read(NULL, buffer, 100);
 	printf("Bytes read: %d\n", bytes);
 	printf("Buffer: %s\n", buffer);
 	

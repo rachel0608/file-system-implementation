@@ -16,7 +16,7 @@
  *    |   |   |__ hw1.txt (contains data "1 + 1 = 2")
  *            |__ labs
  *                |__ lab1 
- *    |   |__ blog_1.txt (contains data "This is blog1")
+ *    |   |__ blog_1.txt (contains data "This is blog1... Blog 1 is also here! Blog 1 ends here!")
  *    |
  *    |__ Download 
  *    |
@@ -43,6 +43,7 @@
 #define ROOT_DIR_SIZE 1
 #define ROOT_LOCATION 11
 #define EMPTY 65535 // first_logical_cluster value for empty directory
+#define UNALLOCATED 0 // FAT entry value for unallocated cluster
 
 void writeSuperblock(FILE *disk) {
     superblock sb;
@@ -74,7 +75,9 @@ void readSuperblock(FILE *disk) {
 void writeFAT(FILE *disk) {
     int fat_entry_count = FAT_SIZE * BLOCK_SIZE;
     FATEntry FAT[fat_entry_count];
-    memset(FAT, 0, sizeof(FAT)); // init all FAT to 0
+    memset(FAT, UNALLOCATED, sizeof(FAT)); 
+    FAT[3].block_number = 7; // blog1.txt starts at block 3
+    FAT[7].block_number = 8; // blog1.txt ends at block 7
     fseek(disk, BLOCK_SIZE * 1, SEEK_SET); // FAT starts at block 1
     fwrite(&FAT, sizeof(FATEntry), fat_entry_count, disk);
 }
@@ -96,8 +99,8 @@ void writeBitmap(FILE *disk) {
     BitmapBlock bitmap;
     memset(bitmap.bitmap, 1, BLOCK_SIZE);
 
-    // Mark blocks 0-6 as used
-    for (int i = 0; i < 7; i++) {
+    // Mark blocks 0-8 as used
+    for (int i = 0; i < 9; i++) {
         bitmap.bitmap[i] = 0;
     }   
 
@@ -175,7 +178,7 @@ void writeData(FILE *disk) {
     memcpy(Desktop_subDir[1].filename, "blog_1", 8);
     memcpy(Desktop_subDir[1].ext, "txt", 3);
     Desktop_subDir[1].first_logical_cluster = 3; 
-    Desktop_subDir[1].file_size = 15; // change later
+    Desktop_subDir[1].file_size = 56; 
     Desktop_subDir[1].type = 0; 
     fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+1), SEEK_SET); 
     fwrite(&Desktop_subDir, sizeof(DirectoryEntry), 2, disk);
@@ -185,10 +188,16 @@ void writeData(FILE *disk) {
     fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+2), SEEK_SET); 
     fwrite(&data1, sizeof(char), BLOCK_SIZE, disk);
 
-    // write data for blog_1.txt in logical cluster 3
-    char data2[BLOCK_SIZE] = "This is blog 1!";
+    // write data for blog_1.txt in logical cluster 3, 7, 8
+    char data2_1[BLOCK_SIZE] = "This is blog 1... "; // 18 bytes
     fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+3), SEEK_SET);
-    fwrite(&data2, sizeof(char), BLOCK_SIZE, disk);
+    fwrite(&data2_1, sizeof(char), BLOCK_SIZE, disk);
+    char data2_2[BLOCK_SIZE] = "Blog 1 is also here! "; // 21 bytes
+    fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+7), SEEK_SET);
+    fwrite(&data2_2, sizeof(char), BLOCK_SIZE, disk);
+    char data2_3[BLOCK_SIZE] = "Blog 1 ends here!"; // 17 bytes 
+    fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+8), SEEK_SET);
+    fwrite(&data2_3, sizeof(char), BLOCK_SIZE, disk);
 
     // write data for homework.txt and labs/ in logical cluster 4
     // homework.txt

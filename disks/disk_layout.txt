@@ -11,7 +11,7 @@ Disk Layout for fake_disk_1 and fake_disk_2:
     |   |   |__ hw1.txt (contains data "1 + 1 = 2")
             |__ labs
                 |__ lab1 
-    |   |__ blog_1.txt (contains data "This is blog1")
+    |   |__ blog_1.txt (contains data "This is blog 1... Blog 1 is also here! Blog 1 ends here")
     |
     |__ Download 
     |
