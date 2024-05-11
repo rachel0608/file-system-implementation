@@ -4,7 +4,7 @@ CFLAGS = -Wall -Wextra
 all: format shell fake_disk_1 fake_disk_2 filesystem
 
 frontend: shell.c
-	$(CC) $(CFLAGS) -o shell shell.c -lreadline
+	$(CC) -Wextra -o shell shell.c -lreadline
 
 backend: format.c fake_disk_1.c fake_disk_2.c filesystem.c
 	$(CC) $(CFLAGS) -o format format.c
