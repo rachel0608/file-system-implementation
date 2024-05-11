@@ -1,17 +1,19 @@
 Disk Layout
 
-- `fake_disk.c` generates `fake_disk` with 3 folders and 3 files
+- `fake_disk_1.c` generates `fake_disk_1.img` (5-level) with 5 folders and 3 files
     root
     |__ Desktop
     |   |__ CS355
     |   |   |__ hw1.txt (contains data "1 + 1 = 2")
+            |__ labs
+                |__ lab1 
     |   |__ blog_1.txt (contains data "This is blog1")
     |
-    |__ Download (empty)
+    |__ Download 
     |
     |__ Hello.txt (contains data "Hello~!")
 
-- `old_fake_disk.c` generates the other disks
+- `fake_disk_2.c` generates 'fake_disk_2.img' (3-level) with 4 folders and 1 file
     root
     |__ folder1
     |   |__ folder_a
