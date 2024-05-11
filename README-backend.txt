@@ -6,19 +6,48 @@ NAME:
 
 Program Files:
 ==============
-    shell.c
+    For formatting the disk:
+        format.c
+
+    For the filesystem:
+        filesystem.h
+        filesystem.c
+        fake_disk_1.c
+        fake_disk_2.c
+        fat.h
+        fat.c
 
 How to Compile:
 ===============
-    make shell
+* IMPORTANT NOTE -> Fake disks must be compiled/make'd before filesystem
+
+    make backend -> Compiles everything in backend
+        OR (do the below in the order listed)
+    make fake_disks
+    make filesystem
+
+* Can also compile each fake_disk individually using: make fake_disk_1
+                                                      make fake_disk_2
 
 How to Run:
-===========
-    ./shell
+=========== (do the below in the order listed)
+    make run_disks
+    ./filesystem
+
+* Can also compile each fake_disk individually using: ./fake_disk_1
+                                                      ./fake_disk_2
 
 Implemented Features & How to Test:
 ===================================
-    Part 1. Built-in commands (no redirection support):
+    Part 1. Commands:
+        - f_open:
+        - f_close:
+        - f_seek:
+        - f_rewind:
+        - f_opendir:
+        - f_closedir:
+        - f_read:
+
         - ls 
             tested: ls, ls <relative path>, ls <path>
             note: no support for flags or redirection. 

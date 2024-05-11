@@ -106,7 +106,7 @@ void reformat_path(char* path) { // removes the file from dir path
 	strcat(path, "/");
 }
 
-FileHandle* f_open(char* path, char* access) {
+FileHandle* f_open(char* path, char* access) { 
 	// Call fopendir, then get the return value of fopendir and feed it into freaddir
 	// then get the return value and go through these directory structs and find the
 	// path specified/ compare filenames

@@ -10,6 +10,8 @@ Program Files:
 
 How to Compile:
 ===============
+    make frontend
+        OR
     make shell
 
 How to Run:

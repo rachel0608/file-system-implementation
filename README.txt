@@ -18,14 +18,19 @@ Program Files:
         shell.c
 
     Part 2 - Backend:
-        filesystem.h
-        filesystem.c
+        For formatting the disk:
         format.c
-        fat.h
-        fat.c
-        /disks - Folder containing all the compiled fake disks
-                 (fake_disk_1.img & fake_disk_2.img) which gets updated when
-                 make fake_disks is called.
+
+        For the filesystem:
+            filesystem.h
+            filesystem.c
+            fake_disk_1.c
+            fake_disk_2.c
+            fat.h
+            fat.c
+            /disks - Folder containing all the compiled fake disks
+                    (fake_disk_1.img & fake_disk_2.img) which gets updated when
+                    make fake_disks is called.
    
    Part 0 - Fake Test Disks:
         fake_disk_1.c
