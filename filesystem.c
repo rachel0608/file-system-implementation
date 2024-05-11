@@ -202,29 +202,6 @@ int f_close(FileHandle* file) {
 	// Concern: How do we compare DirectoryEntry and FileHandle?????
 	// FileHandle* open_dirs[MAX_DIRS];
 
-/* int f_read(FileHandle file, void* buffer, size_t bytes) {
-	// Checking if the file can be opened for reading
-	if ((strcmp(file.access, "r") != 0) && (strcmp(file.access, "r+") != 0) && (strcmp(file.access, "a+") != 0)) {
-        printf("ERROR: Cannot open file for reading.\n");
-        return -1;
-    }
-
-	// Maybe change find_file to opendir??
-    DirectoryEntry *dir_entry = find_file(file->abs_path);
-    if (dir_entry == NULL) {
-        printf("ERROR: File at this path not found - %s\n", file->abs_path);
-        return -1;
-    }
-
-	FATEntry start_cluster;
-    start_cluster.block_number = dir_entry->first_logical_cluster;
-    fat_read_file_contents(&start_cluster, dir_entry->file_size, buffer);
-
-	file->position += bytes;
-	return bytes;
-}
-*/
-
 // int f_write(FileHandle file, void* buffer, size_t bytes);
 
 int f_seek(FileHandle* file, long offset, int whence) {
@@ -396,8 +373,8 @@ Directory* f_readdir(DirectoryEntry* entry) {
 
 // read the contents of a file
 int f_read(FileHandle *file, void* buffer, int bytes) {
-	int first_logical_cluster = 2; // "Hello.txt" is at cluster 2
-	int file_size = 7; // file->file_size
+	int first_logical_cluster = 3; // file->first_logical_cluster when open() works properly
+	int file_size = 15; // file->file_size when open() works properly
 	int result = 0;
 
 	if (buffer == NULL) {
@@ -405,8 +382,27 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
         return -1; // Return error code
     }
 
+	// UNCOMMENT THIS WHEN OPEN() WORKS
+
+	// if (file == NULL) {
+	// 	printf("Error: File handle is NULL.\n");
+	// 	return -1; // Return error code
+	// }
+
+	if (bytes < 0) {
+		printf("Error: Number of bytes to read is negative.\n");
+		return -1; // Return error code
+	}
+
+	// UNCOMMENT THIS WHEN OPEN() WORKS
+	// if (file->position >= file_size) {
+	// 	printf("Error: File position is at or beyond the end of the file.\n");
+	// 	return 0; // Return 0 bytes read
+	// }
+
+	// Check if the number of bytes to read exceeds the file size
 	if (bytes > file_size) {
-        bytes = file_size;
+        bytes = file_size; 
     }
 
 	for (int i = 0; i < bytes; i++) {
@@ -528,13 +524,13 @@ int main(void) {
 	// }
 	
 
-	printf("=== testing f_opendir open CS355 dir ===\n");
-	DirectoryEntry* opened_cs355 = f_opendir("/Desktop/CS355");
-	if (opened_cs355 != NULL){
-		printf("\nverifying dir: \n");
-		print_subdir(opened_cs355);
-		printf("opendir(cs355) done\n \n");
-	}
+	// printf("=== testing f_opendir open CS355/labs/lab1 dir ===\n");
+	// DirectoryEntry* opened_cs355 = f_opendir("/Desktop/CS355/labs/lab1");
+	// if (opened_cs355 != NULL){
+	// 	printf("\nverifying dir: \n");
+	// 	print_subdir(opened_cs355);
+	// 	printf("opendir(cs355) done\n \n");
+	// }
 
 	// printf("=== testing f_opendir open Download dir ===\n");
 	// DirectoryEntry* opened_download = f_opendir("/Download");
@@ -587,22 +583,22 @@ int main(void) {
 	// *****
 	// Testing for f_read():
 	
-	// printf("\n=== testing f_read on Hello.txt ===\n");
-	// char buffer[20];
-	// printf("Attempting to read 7 bytes\n");
-	// int bytes = f_read(NULL, buffer, 7);
-	// printf("bytes read: %d\n", bytes);
-	// printf("buffer: %s\n", buffer);
+	printf("\n=== testing f_read on Hello.txt ===\n");
+	char buffer[20];
+	printf("Attempting to read 15 bytes (file size)\n");
+	int bytes = f_read(NULL, buffer, 20);
+	printf("bytes read: %d\n", bytes);
+	printf("buffer: %s\n", buffer);
 
-	// printf("Attempting to read 5 bytes\n");
-	// bytes = f_read(NULL, buffer, 5);
-	// printf("bytes read: %d\n", bytes);
-	// printf("buffer: %s\n", buffer);
+	printf("Attempting to read 6 bytes only\n");
+	bytes = f_read(NULL, buffer, 6);
+	printf("bytes read: %d\n", bytes);
+	printf("buffer: %s\n", buffer);
 
-	// printf("Attempting to read 100 bytes\n");
-	// bytes = f_read(NULL, buffer, 100);
-	// printf("bytes read: %d\n", bytes);
-	// printf("buffer: %s\n", buffer);
+	printf("Attempting to read 1000 bytes (file size exceeded)\n");
+	bytes = f_read(NULL, buffer, 1000);
+	printf("bytes read: %d\n", bytes);
+	printf("buffer: %s\n", buffer);
 
 	// ----------------------------------------
 
