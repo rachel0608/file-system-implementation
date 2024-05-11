@@ -39,50 +39,32 @@ How to Run:
 
 Implemented Features & How to Test:
 ===================================
-    Part 1. Commands:
-        - f_open:
-        - f_close:
-        - f_seek:
-        - f_rewind:
-        - f_opendir:
-        - f_closedir:
-        - f_read:
+    Part 1. Working Commands:
+        - f_open: open the specified file with the specified access. If the
+                  file does not exist, handle accordingly. Returns a file
+                  handle if successful.
 
-        - ls 
-            tested: ls, ls <relative path>, ls <path>
-            note: no support for flags or redirection. 
-        - pwd
-            tested: pwd
-            note: no support for redirection.
-        - cd
-            tested: cd <relative path>, cd <path>, cd, cd ., cd ..
-            note: use pwd after cd to check if working directory is changed properly
-        - mkdir
-            tested: mkdir <dir_name>, mkdir (missing args)
-            note: us ls after mkdir to check
-        - rmdir
-            tested: rmdir <dir_name>, rmdir (missing operand)
-            note: us ls after mkdir to check
-        - cat
-            tested: cat <filename>
-            note: no support for redirection. Needs args, can only cat 1 file at a time. 
-        - more
-            test: more <filename>
-            note: no support for redirection. press "enter" for next page. 
-        - rm
-            test: rm <filename>
+        - f_read: read the specified number of bytes from a file handle at the
+                  current position. Returns the number of bytes read, or an error.
 
-    Part 2. Non built-in commands with redirection:
-        - input (<)
-            cat < test.txt
-        - output (>)
-            echo hi > test.txt
-            ps > ps.txt
-        - append (>>)
-            echo hiii >> test.txt
-            ps >> ps.txt
+        - f_close: close a file handle.
 
-    Part 3. Not implemented:
+        - f_opendir: recall that directories are handled as special cases of
+                     files. open a “directory file” for reading, and return a
+                     directory handle.
+        
+        - f_readdir: returns a pointer to a “directory entry” structure
+                     representing the next directory entry in the directory
+                     file specified.
+
+        - f_closedir: close an open directory file.
+
+    Part 2. Not Working or Partially Working/Created Commands:
+        - f_seek: move to a specified position in a file.
+
+        - f_rewind: move to the start of the file.
+
+    Part 3. Not Implemented:
         - -l and -F flags for ls
         - chmod (only has parser)
         - redirection support for ls, pwd, cat, more
