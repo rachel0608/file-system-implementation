@@ -550,9 +550,17 @@ void fs_mount(char *diskname) {
 	printf("Mounting done\n \n");
 }
 
+void is_success(int val) {
+	if (val == 0) {
+		printf("Successfully closed file~!\n");
+		return;
+	}
+
+	printf("Failure, cannot close file~~\n");
+}
 
 void test_opendir_readdir_disk_1() {
-	printf("==== TESTING F_OPENDIR() ====\n");
+	printf("\n\n==== TESTING F_OPENDIR() ====\n");
 
 	printf("1. Open root directory\n");
 	DirectoryEntry* opened_root = f_opendir("/");
@@ -596,7 +604,7 @@ void test_opendir_readdir_disk_1() {
 		printf("Cannot open essay because it does not exist.\n");
 	}
 
-	printf("\n==== TESTING F_READDIR() ====\n"); // print statement in f_readdir()
+	printf("\n\n==== TESTING F_READDIR() ====\n"); // print statement in f_readdir()
 	printf("1. Read root directory\n");
 	Directory* sub_entries = f_readdir(opened_root);
 	print_dir(sub_entries);
@@ -622,7 +630,7 @@ void test_opendir_readdir_disk_1() {
 }
 
 void test_hardcoded_fread_disk_1() {
-	printf("\n==== TESTING F_READ() ====\n");
+	printf("\n\n==== TESTING F_READ() ====\n");
 
 	printf("Read /Desktop/blog_1.txt\n");
 	printf("1. Open /Desktop/Blog1.txt\n");
@@ -647,7 +655,7 @@ void test_hardcoded_fread_disk_1() {
 }
 
 void test_open_read_disk_1() {
-	printf("\n==== TESTING F_OPEN() ====\n");
+	printf("\n\n==== TESTING F_OPEN() ====\n");
 
 	printf("1. Open /Desktop/blog_1.txt\n");
 	FileHandle* blog_1 = f_open("/Desktop/blog_1.txt", "r");
@@ -669,7 +677,7 @@ void test_open_read_disk_1() {
 	FileHandle* hello = f_open("/Hello.txt", "r");
 	print_file_handle(hello);
 
-	printf("==== TESTING F_READ() ====\n");
+	printf("\n\n==== TESTING F_READ() ====\n");
 	printf("1. Read /Desktop/blog_1.txt\n");
 	
 	printf("\nRead the whole file\n");
@@ -717,98 +725,58 @@ void test_open_read_disk_1() {
 	printf("\n6. Read from NULL buffer\n");
 	bytes = f_read(blog_1, NULL, 10);
 	printf("Bytes read: %d\n", bytes);
+
+	// Tests for f_seek()
+	printf("\n\n==== TESTING F_SEEK() ====\n");
+	printf("1. Change File Pointer Location for /Desktop/blog_1.txt\n");
+	printf("a. Check with SEEK_SET\n");
+	printf("Expected Updated File Position: 1\n");
+
+	int success = f_seek(blog_1, 1, SEEK_SET);
+	if (success == 0) {
+		printf("Successfully fseek()'ed\n");
+		printf("Updated File Position: %d\n", blog_1->position);
+	} else {
+		printf("Failed to fseek()\n");
+	}
+
+	printf("\nb. Check with SEEK_CURR\n");
+	printf("Expected Updated File Position: 2\n");
+	success = f_seek(blog_1, 1, SEEK_CUR);
+	if (success == 0) {
+		printf("Successfully fseek()'ed\n");
+		printf("Updated File Position: %d\n", blog_1->position);
+	} else {
+		printf("Failed to fseek()\n");
+	}
+
+	printf("\nc. Check with SEEK_END\n");
+	printf("Expected Updated File Position: 56\n");
+	success = f_seek(blog_1, 0, SEEK_END);
+	if (success == 0) {
+		printf("Successfully fseek()'ed\n");
+		printf("Updated File Position: %d\n", blog_1->position);
+	} else {
+		printf("Failed to fseek()\n");
+	}
+
+	// Tests for f_rewind()
+	printf("\n\n==== TESTING F_REWIND() ====\n");
+	printf("1. Rewind File Pointer Location for /Desktop/blog_1.txt\n");
+	printf("Expected Updated File Position: 0\n");
+
+	f_rewind(blog_1);
+	printf("Rewinded File Position: %d\n", blog_1->position);
 }
 
 void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
-	// test_opendir_readdir_disk_1();
+	test_opendir_readdir_disk_1();
 	// test_hardcoded_fread_disk_1();
 	test_open_read_disk_1();
 }
 
 int main(void) {
-	// Mount fake_disk_2.img
-	// fs_mount("./disks/fake_disk_2.img");
-
-	// Mount fake_disk.img
+	// Runs mount and tests for fake_disk_1
 	test_disk_1();
-
-	// *****
-	// Testing for f_open():
-
-	// printf("\n=== testing f_open on Hello.txt ===\n");
-	// // char buffer[20];
-	// FileHandle* file = f_open("/Hello.txt", "r");
-	// print_filehandle(file);
-
-	// FileHandle* file2 = f_open("/Hello.txt", "r");
-	// print_filehandle(file2);
-
-	// printf("\n=== testing f_open on blog_1.txt ===\n");
-	// // char buffer[20];
-	// file = f_open("/Desktop/blog_1.txt", "r");
-	// print_filehandle(file);
-
-	// printf("\n=== testing f_open on hw1.txt ===\n");
-	// // char buffer[20];
-	// file = f_open("/Desktop/CS355", "r");
-	// print_filehandle(file);
-
-	// *****
-	// Testing for f_read():
-	
-	// printf("\n=== testing f_read on Hello.txt ===\n");
-	// char buffer[20];
-	// printf("Attempting to read 15 bytes (file size)\n");
-	// int bytes = f_read(NULL, buffer, 20);
-	// printf("bytes read: %d\n", bytes);
-	// printf("buffer: %s\n", buffer);
-
-	// printf("Attempting to read 6 bytes only\n");
-	// bytes = f_read(NULL, buffer, 6);
-	// printf("bytes read: %d\n", bytes);
-	// printf("buffer: %s\n", buffer);
-
-	// printf("Attempting to read 1000 bytes (file size exceeded)\n");
-	// bytes = f_read(NULL, buffer, 1000);
-	// printf("bytes read: %d\n", bytes);
-	// printf("buffer: %s\n", buffer);
-
-	// ----------------------------------------
-
-	// Mount fake_disk_4_folders.img
-	// fs_mount("./disks/fake_disk_4_folders.img");
-
-	// printf("=== test: open root dir ===\n");
-	// DirectoryEntry* opened_entry = f_opendir("/");
-	// printf("opened directory: \n");
-	// print_subdir(opened_entry);
-	// printf("opendir(/) done\n \n");
-
-	// printf("=== test: open folder2 dir ===\n");
-	// opened_entry = f_opendir("folder2");
-	// if (opened_entry != NULL){
-	// 	printf("opened directory: \n");
-	// 	print_subdir(opened_entry);
-	// 	printf("opendir(folder2) done\n \n");
-	// }
-
-	// printf("=== test: open folder1 dir ===\n");
-	// opened_entry = f_opendir("folder1");
-	// printf("opened directory: \n");
-	// print_subdir(opened_entry);
-	// printf("opendir(folder1) done\n \n");
-
-	// printf("=== test: open file1.txt ===\n");
-	// opened_entry = f_opendir("file1.txt");
-	// if (opened_entry != NULL){
-	// 	printf("opened directory: \n");
-	// 	print_subdir(opened_entry);
-	// 	printf("opendir(file1) done\n \n");
-	// }
-
-	// printf("===testing readdir on folder1 ===\n");
-	// Directory* sub_entries = f_readdir(opened_entry);
-	// print_dir(sub_entries);
-
 }
