@@ -160,5 +160,5 @@ File Directory:
 
 How to Clean:
 =============
-    Removes defrag:
+    Removes everything:
       make clean

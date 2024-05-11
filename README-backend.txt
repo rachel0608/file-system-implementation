@@ -72,5 +72,9 @@ Limitations:
 
 Other Useful Notes:
 ===================
-    - use control + c to terminate current running process
-    - use control + d or exit to stop shell
+    We tried our best~!
+
+How to Clean:
+=============
+    Removes everything:
+      make clean
