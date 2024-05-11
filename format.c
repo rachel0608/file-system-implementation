@@ -134,7 +134,6 @@ superblock initialize_superblock(FILE *disk_image, int disk_size_mb) {
 void initialize_fat(FILE *disk_image, superblock sb) {
 
     //each block of FAT has 256 entries
-    int num_entries_per_block = BLOCKSIZE/BYTES_PER_ENTRY;
     int num_blocks = sb.file_size_blocks;
 
     // Allocate memory & initialize all FAT entries as free
@@ -224,7 +223,7 @@ void test_readfat(FILE *disk_image, superblock sb) {
     fseek(disk_image, (BLOCKSIZE * sb.FAT_offset), SEEK_SET);
     fread(fat_entries, sb.file_size_blocks * sizeof(FATEntry), 1, disk_image);
 
-    for (int i = 0; i < sb.file_size_blocks; i++) {
+    for (int i = 0; i < (int) sb.file_size_blocks; i++) {
         printf("fat cell %d: %d\n", i, fat_entries[i].block_number);
     }
 
@@ -269,7 +268,7 @@ void test_cluster_allocation(FILE *disk_image, superblock sb) {
     int current_cluster = start_cluster;
 
     // Allocate clusters for a new file (chain them in FAT)
-    while (current_cluster < sb.file_size_blocks) {
+    while (current_cluster < (int) sb.file_size_blocks) {
         if (fat_entries[current_cluster].block_number == FREEBLOCK) {
             fat_entries[current_cluster].block_number = END_OF_FILE;
             break;
@@ -295,7 +294,7 @@ void test_bitmap(FILE *disk_image, superblock sb) {
 
     // Validate the bitmap contents
     int num_used_blocks = 0;
-    for (int i = 0; i < sb.file_size_blocks; i++) {
+    for (int i = 0; i < (int) sb.file_size_blocks; i++) {
         int byte_index = i / 8;
         int bit_index = i % 8;
         int is_used = !(bitmap_block.bitmap[byte_index] & (1 << bit_index));
