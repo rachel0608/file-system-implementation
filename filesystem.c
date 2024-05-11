@@ -546,6 +546,7 @@ void test_opendir_readdir_disk_1() {
 	printf("\n==== TESTING F_READDIR() ====\n"); // print statement in f_readdir()
 	printf("1. Read root directory\n");
 	Directory* sub_entries = f_readdir(opened_root);
+	print_dir(sub_entries);
 
 	printf("\n2. Read /Desktop directory\n");
 	sub_entries = f_readdir(opened_desktop);
@@ -602,10 +603,10 @@ void test_disk_1() {
 
 int main(void) {
 	// Mount fake_disk_2.img
-	fs_mount("./disks/fake_disk_2.img");
+	// fs_mount("./disks/fake_disk_2.img");
 
 	// Mount fake_disk.img
-	//test_disk_1();
+	test_disk_1();
 
 	// *****
 	// Testing for f_open():
