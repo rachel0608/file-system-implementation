@@ -61,14 +61,16 @@ Implemented Features & How to Test:
 
     Part 2. Not Working or Partially Working/Created Commands:
         - f_seek: move to a specified position in a file.
-
         - f_rewind: move to the start of the file.
 
     Part 3. Not Implemented:
-        - -l and -F flags for ls
-        - chmod (only has parser)
-        - redirection support for ls, pwd, cat, more
-        - integration with our own filesystem backend
+        - f_write()
+        - f_stat()
+        - f_remove()
+        - f_mkdir()
+        - f_rmdir()
+        - f_mount() (Extra Credit not done)
+        - f_umount() (Extra Credit not done)
 
 Limitations:
 ============
