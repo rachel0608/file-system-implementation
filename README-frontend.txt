@@ -40,10 +40,10 @@ Implemented Features & How to Test:
             tested: cat <filename>
             note: no support for redirection. Needs args, can only cat 1 file at a time. 
         - more
-            test: more <filename>
+            tested: more <filename>
             note: no support for redirection. press "enter" for next page. 
         - rm
-            test: rm <filename>
+            tested: rm <filename>
 
     Part 2. Non built-in commands with redirection:
         - input (<)

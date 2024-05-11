@@ -12,6 +12,12 @@ NAME:
 |    README-backend.txt -> for testing the backend                              |
 ---------------------------------------------------------------------------------
 
+-- Extra Note -------------------------------------------------------------------
+* If you would like to see the layout of our fake disks (fake_disk_1 and fake_disk_2)
+  please visit the program files (fake_disk_1.c and fake_disk_2.c) or look at
+  disk_layout.txt for more context~!
+---------------------------------------------------------------------------------
+
 Program Files:
 ==============
     Part 1 - Frontend:

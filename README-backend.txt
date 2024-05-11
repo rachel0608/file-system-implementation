@@ -62,6 +62,12 @@ Implemented Features:
 
 How to Test:
 ============
+    - f_open
+    - f_read
+    - f_opendir
+    - f_readdir
+    - f_seek
+    - f_rewind
 
 Limitations:
 ============
