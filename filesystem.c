@@ -80,10 +80,11 @@ void print_dir(Directory* entry) {
 }
 
 // print a subdirectory
-void print_filehandle(FileHandle* file) {
+void print_file_handle(FileHandle* file) {
 	if (file != NULL) {
 		printf("FileHandle Info:\n");
 		printf("Absolute Path: %s\n", file->abs_path);
+		printf("First Logical Cluster: %d\n", file->first_logical_cluster);
 		printf("File Descriptor: %d\n", file->file_desc);
 		printf("File Access Type: %s\n", file->access);
 		printf("File Position: %d\n", file->position);
@@ -106,6 +107,20 @@ void reformat_path(char* path) { // removes the file from dir path
 	strcat(path, "/");
 }
 
+char* find_relative_path(char* path) { // last part of the path
+	if (path == NULL || *path == '\0') {
+		printf("Invalid input: NULL pointer or empty string.\n");
+		return NULL;
+	}
+	char *last_slash = strrchr(path, '/'); // Find last occurrence of ‘/’
+	if (last_slash != NULL) {
+		return last_slash + 1; // Return the string after the last ‘/’
+	} else {
+		printf("No ‘/’ found in the string.\n");
+		return path;
+	}
+}
+
 FileHandle* f_open(char* path, char* access) { 
 	// Call fopendir, then get the return value of fopendir and feed it into freaddir
 	// then get the return value and go through these directory structs and find the
@@ -124,35 +139,37 @@ FileHandle* f_open(char* path, char* access) {
 	char new_path[2048];
 	strncpy(new_path, path, sizeof(new_path) - 1);
 	reformat_path(new_path);
-
-	printf("Path: %s\n", path);
-	printf("Reformatted Path: %s\n", new_path);
+	char* filename = find_relative_path(path);
 
 	DirectoryEntry* open_entry = f_opendir(new_path);
 	Directory* all_dirs = f_readdir(open_entry);
+	DirectoryEntry* target_file = NULL;
 
 	for (int i = 0; i < num_dir_per_block; i++) {
-		// check if the filename matches
-		DirectoryEntry* dir = &all_dirs->entries[i];
-		
-		if ((strcmp(dir->filename, "") != 0) && (strcmp(open_entry->filename, dir->filename) == 0)) {
-			printf("Directory opened: %s\n", open_entry->filename);
-
-			for (int j = 0; j < MAX_DIRS; j++) {
-				printf("YAYEET    %s\n", opened_dirs[j]->abs_path);
-				if ((opened_dirs[i] != NULL) && (strcmp(opened_dirs[j]->abs_path, path) == 0)) {
-					printf("HELLLOO ARGH\n");
-					return opened_dirs[i];
-				}
-			}
+		// check if the filename matches		
+		if (compare_filename(filename, &all_dirs->entries[i])) {
+			target_file = &all_dirs->entries[i];
+			printf("File opened: %s\n", open_entry->filename);
 		}
+	}
+
+	if (target_file == NULL) {
+		printf("ERROR: File does not exist.\n");
+		return NULL;
+	}
+
+	if (target_file->type == 1) {
+		printf("ERROR: Cannot open a directory.\n");
+		return NULL;
 	}
 
 	FileHandle* file = (FileHandle*)malloc(sizeof(FileHandle));
 	file->abs_path = path;
+	file->first_logical_cluster = target_file->first_logical_cluster;
 	file->file_desc = 0;  // Default for now, can change, just put 0
 	file->access = access;
 	file->position = 0;
+	file->file_size = target_file->file_size;
 
 	int index = -1;
 	for (int i = 0; i < MAX_DIRS; i++) {
@@ -382,39 +399,33 @@ char* read_block(int cluster) {
 
 // read the contents of a file
 int f_read(FileHandle *file, void* buffer, int bytes) {
-	int first_logical_cluster = 3; // file->first_logical_cluster when open() works properly
-	int file_size = 56; // file->file_size when open() works properly
-
-	// int first_logical_cluster = file->first_logical_cluster;
-	// printf("first_logical_cluster: %d\n", first_logical_cluster);
-	// int file_size = file->file_size;
-
 	if (buffer == NULL) {
         printf("Error: Buffer pointer is NULL.\n");
         return -1; // Return error code
     }
 
-	// UNCOMMENT THIS WHEN OPEN() WORKS
-	// if (file == NULL) {
-	// 	printf("Error: File handle is NULL.\n");
-	// 	return -1; // Return error code
-	// }
+	if (file == NULL) {
+		printf("Error: File handle is NULL.\n");
+		return -1; // Return error code
+	}
 
 	if (bytes < 0) {
 		printf("Error: Number of bytes to read is negative.\n");
 		return -1; // Return error code
 	}
 
-	// UNCOMMENT THESE WHEN OPEN() WORKS
-	// if (file->position >= file_size) {
-	// 	printf("Error: File position is at or beyond the end of the file.\n");
-	// 	return 0; // Return 0 bytes read
-	// }
+	int first_logical_cluster = file->first_logical_cluster;
+	int file_size = file->file_size;
 
-	// if (strcmp(file->access, "r") != 0 && strcmp(file->access, "r+") != 0) {
-	// 	printf("Error: File is not open for reading.\n");
-	// 	return -1; // Return error code
-	// }
+	if (file->position >= file_size) {
+		printf("Error: File position is at or beyond the end of the file.\n");
+		return 0; // Return 0 bytes read
+	}
+
+	if (strcmp(file->access, "r") != 0 && strcmp(file->access, "r+") != 0) {
+		printf("Error: File is not open for reading.\n");
+		return -1; // Return error code
+	}
 
 	// Check if the number of bytes to read exceeds the file size
 	if (bytes > file_size) {
@@ -539,24 +550,6 @@ void fs_mount(char *diskname) {
 	printf("Mounting done\n \n");
 }
 
-void print_file_handle(FileHandle* fh) {
-	if (fh == NULL) {
-		printf("ERROR: Cannot print file handle because file handle is NULL.\n");
-		return;
-	}
-
-	printf("Printing FILE HANDLE==============\n");
-	printf("HERE10\n");
-	printf("abs_path:  %s\n", fh->abs_path);
-	printf("HERE11\n");
-	printf("file_desc:  %d\n", fh->file_desc);
-	printf("HERE12\n");
-	printf("access:  %s\n", fh->access);
-	printf("HERE13\n");
-	printf("position:  %d\n", fh->position);
-	printf("HERE14\n");
-	printf("file_size:  %d\n", fh->file_size);
-}
 
 void test_opendir_readdir_disk_1() {
 	printf("==== TESTING F_OPENDIR() ====\n");
@@ -628,10 +621,10 @@ void test_opendir_readdir_disk_1() {
 
 }
 
-void test_read_disk_1() {
+void test_hardcoded_fread_disk_1() {
 	printf("\n==== TESTING F_READ() ====\n");
 
-	printf("Read /Desktop/Blog1.txt\n");
+	printf("Read /Desktop/blog_1.txt\n");
 	printf("1. Open /Desktop/Blog1.txt\n");
 	printf("GRACEEE~~\n");
 
@@ -651,15 +644,87 @@ void test_read_disk_1() {
 	bytes = f_read(NULL, buffer, 100);
 	printf("Bytes read: %d\n", bytes);
 	printf("Buffer: %s\n", buffer);
+}
+
+void test_open_read_disk_1() {
+	printf("\n==== TESTING F_OPEN() ====\n");
+
+	printf("1. Open /Desktop/blog_1.txt\n");
+	FileHandle* blog_1 = f_open("/Desktop/blog_1.txt", "r");
+	print_file_handle(blog_1);
+
+	printf("\n2. Attempt to open /Desktop/blog_2.txt (non-existent)\n");
+	FileHandle* blog_2 = f_open("/Desktop/blog_2.txt", "r");
+	print_file_handle(blog_2);
+
+	printf("\n3. Attempt to open /Desktop/CS355 (folder)\n");
+	FileHandle* cs355 = f_open("/Desktop/CS355", "r");
+	print_file_handle(cs355);
+
+	printf("\n4. Open /Desktop/CS355/hw1.txt\n");
+	FileHandle* hw1 = f_open("/Desktop/CS355/hw1.txt", "r");
+	print_file_handle(hw1);
+
+	printf("\n5. Open /Hello.txt\n");
+	FileHandle* hello = f_open("/Hello.txt", "r");
+	print_file_handle(hello);
+
+	printf("==== TESTING F_READ() ====\n");
+	printf("1. Read /Desktop/blog_1.txt\n");
 	
+	printf("\nRead the whole file\n");
+	char buffer[512];
+	int bytes = f_read(blog_1, buffer, 56);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\nRead 6 bytes only\n");
+	bytes = f_read(blog_1, buffer, 6);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\nAttempt to read 100 bytes (file size exceeded)\n");
+	bytes = f_read(blog_1, buffer, 100);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\n2. Read /Desktop/CS355/hw1.txt\n");
+	printf("Read the whole file\n");
+	bytes = f_read(hw1, buffer, 9);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\nRead 0 bytes\n");
+	bytes = f_read(hw1, buffer, 0);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\n3. Read /Desktop/blog_2.txt (non-existent)\n");
+	bytes = f_read(blog_2, buffer, 10);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\n4. Read /Desktop/CS355 (folder)\n");
+	bytes = f_read(cs355, buffer, 10);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\n5. Read /Hello.txt\n");
+	bytes = f_read(hello, buffer, 10);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\n6. Read from NULL buffer\n");
+	bytes = f_read(blog_1, NULL, 10);
+	printf("Bytes read: %d\n", bytes);
 }
 
 void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
-	test_opendir_readdir_disk_1();
-	test_read_disk_1();
+	// test_opendir_readdir_disk_1();
+	// test_hardcoded_fread_disk_1();
+	test_open_read_disk_1();
 }
-
 
 int main(void) {
 	// Mount fake_disk_2.img

@@ -27,6 +27,7 @@ typedef struct {
 
 typedef struct {
 	char* abs_path; // Absolute path
+    int first_logical_cluster; // First logical cluster
 	int file_desc; // File descriptor
 	char* access; // File access type
 	int position; // File position
