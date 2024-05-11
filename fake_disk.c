@@ -29,6 +29,7 @@ File size in blocks: 2048
 #define FAT_SIZE 8 // in blocks
 #define ROOT_DIR_SIZE 1
 #define ROOT_LOCATION 11
+#define EMPTY 65535 // first_logical_cluster value for empty directory
 
 void writeSuperblock(FILE *disk) {
     superblock sb;
@@ -134,7 +135,7 @@ void writeSubDir(FILE *disk) {
 
     memcpy(subDir[1].filename, "Download", 8);
     memcpy(subDir[1].ext, "", 3);
-    subDir[1].first_logical_cluster = 0;
+    subDir[1].first_logical_cluster = EMPTY;
     subDir[1].file_size = 0;
     subDir[1].type = 1; // directory
 
@@ -176,20 +177,38 @@ void writeData(FILE *disk) {
     fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+3), SEEK_SET);
     fwrite(&data2, sizeof(char), BLOCK_SIZE, disk);
 
-    // write data for homework.txt in logical cluster 4
+    // write data for homework.txt and labs/ in logical cluster 4
+    // homework.txt
     DirectoryEntry CS355_subDir[2];
     memcpy(CS355_subDir[0].filename, "hw1", 8); 
     memcpy(CS355_subDir[0].ext, "txt", 3);
     CS355_subDir[0].first_logical_cluster = 5;
     CS355_subDir[0].file_size = 9; 
     CS355_subDir[0].type = 0; 
+    // labs/
+    memcpy(CS355_subDir[1].filename, "labs", 8); 
+    memcpy(CS355_subDir[1].ext, "", 3);
+    CS355_subDir[1].first_logical_cluster = 6;
+    CS355_subDir[1].file_size = 0; 
+    CS355_subDir[1].type = 1; 
     fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+4), SEEK_SET);
-    fwrite(&CS355_subDir, sizeof(DirectoryEntry), 1, disk);
+    fwrite(&CS355_subDir, sizeof(DirectoryEntry), 2, disk);
 
     // write data for hw1.txt in logical cluster 5
     char data3[BLOCK_SIZE] = "1 + 1 = 2";
     fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+5), SEEK_SET);
     fwrite(&data3, sizeof(char), BLOCK_SIZE, disk);
+
+    // write data for labs/ in logical cluster 6
+    DirectoryEntry labs_subDir[2];
+    memcpy(labs_subDir[0].filename, "lab1", 8);
+    memcpy(labs_subDir[0].ext, "", 3);
+    labs_subDir[0].first_logical_cluster = EMPTY;
+    labs_subDir[0].file_size = 0;
+    labs_subDir[0].type = 1;
+    fseek(disk, BLOCK_SIZE * (ROOT_LOCATION+6), SEEK_SET);
+    fwrite(&labs_subDir, sizeof(DirectoryEntry), 1, disk);
+
 }
 
 // void readData(FILE *disk) {
@@ -214,7 +233,7 @@ void readData(FILE *disk) {
 
 int main() {
     // Create disk
-    FILE *disk = fopen("fake_disk.img", "wb");
+    FILE *disk = fopen("./disks/fake_disk_1.img", "wb");
     if (disk == NULL) {
         printf("Error creating disk image.\n");
         return 1;

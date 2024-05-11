@@ -11,6 +11,7 @@
 #define SEEK_CUR 1
 #define SEEK_END 2
 #define MAX_DIRS 100
+#define EMPTY 65535 // first_logical_cluster value for empty directory
 
 FileHandle* opened_dirs[MAX_DIRS] = { NULL }; // All files that are open
 superblock sb;
@@ -323,6 +324,16 @@ Directory* f_readdir(DirectoryEntry* entry) {
 		return NULL;
 	}
 
+	if (entry->type != 1) {
+		printf("readdir: given entry is not a directory.\n");
+		return NULL;
+	}
+
+	if (entry->first_logical_cluster == EMPTY) {
+		printf("readdir: given entry is empty.\n");
+		return NULL;
+	}
+
 	// array of all dir entry
 	Directory* dir = (Directory*)malloc(sizeof(Directory));
 	dir = (Directory *) data_section[entry->first_logical_cluster].buffer;
@@ -381,7 +392,6 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
     }
 
 	// UNCOMMENT THIS WHEN OPEN() WORKS
-
 	// if (file == NULL) {
 	// 	printf("Error: File handle is NULL.\n");
 	// 	return -1; // Return error code
@@ -392,10 +402,15 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 		return -1; // Return error code
 	}
 
-	// UNCOMMENT THIS WHEN OPEN() WORKS
+	// UNCOMMENT THESE WHEN OPEN() WORKS
 	// if (file->position >= file_size) {
 	// 	printf("Error: File position is at or beyond the end of the file.\n");
 	// 	return 0; // Return 0 bytes read
+	// }
+
+	// if (file->access != "r") {
+	// 	printf("Error: File is not open for reading.\n");
+	// 	return -1; // Return error code
 	// }
 
 	// Check if the number of bytes to read exceeds the file size
@@ -460,16 +475,16 @@ void fs_mount(char *diskname) {
 	fseek(disk, BLOCK_SIZE * sb.ROOTDIR_offset, SEEK_SET);
 	fread(&root_dir_entry, sizeof(DirectoryEntry), 1, disk); //Directory Entry is size: 19 bytes
 	printf("Root directory: %s\n", root_dir_entry.filename);
-	printf("first block: %d\n", root_dir_entry.first_logical_cluster);
+	printf("First block: %d\n", root_dir_entry.first_logical_cluster);
     // printf("file size: %d\n", root_dir_entry.file_size);
-    printf("file type: %d\n", root_dir_entry.type);
+    printf("File type: %d\n", root_dir_entry.type);
 	printf("\n");
 	
 	//read + define datablock section
     data_section = (datablock *)malloc(sb.file_size_blocks * sizeof(datablock));
 	fseek(disk, BLOCK_SIZE * sb.DATA_offset, SEEK_SET); // Move to first block in data section
 	fread(data_section, BLOCK_SIZE, sb.file_size_blocks, disk); //Directory is size: 512 bytes
-	printf("Data section: \n");
+	printf("Data section (only 10 blocks shown): \n");
 	printf("If directory, print the first entry\n");
     for (int i = 0; i < 10; i++) {
         //replace 10 with sb.file_size_blocks to print entire data section
@@ -480,7 +495,6 @@ void fs_mount(char *diskname) {
     // Access the first block in the data section to verify the copy
     root_dir = (Directory *) data_section[0].buffer;
     printf("Root dir's first entry filename: %s\n", root_dir->entries[0].filename);
-    // printf("Root dir's first entry file size: %d\n", root_dir->entries[0].file_size);
     printf("Root dir's first entry first block: %d\n", root_dir->entries[0].first_logical_cluster);
     printf("Root dir's first entry type: %d\n", root_dir->entries[0].type);
 	
@@ -507,7 +521,7 @@ void print_file_handle(FileHandle* fh) {
 	printf("file_size:  %d\n", fh->file_size);
 }
 
-void test_opendir_disk_1() {
+void test_opendir_readdir_disk_1() {
 	printf("==== TESTING F_OPENDIR() ====\n");
 
 	printf("1. Open root directory\n");
@@ -530,22 +544,84 @@ void test_opendir_disk_1() {
 
 	printf("\n4. Attempt to open /Hello.txt (not a directory)\n");	
 	DirectoryEntry* opened_hello = f_opendir("Hello.txt");
-	if (opened_hello != NULL){
-		printf("Error: Hello.txt is a file\n");
-		print_subdir(opened_hello);
+	if (opened_hello == NULL){
+		printf("Cannot open Hello.txt because it is not a directory.\n");
 	}
 
-	printf("\n5. Open /CS355/labs/lab1 \n");
+	printf("\n5. Open /Desktop/CS355 directory\n");
+	DirectoryEntry* opened_cs355 = f_opendir("/Desktop/CS355");
+	if (opened_cs355 != NULL) {
+		print_subdir(opened_cs355);
+	}
+
+	printf("\n6. Open /Desktop/CS355/labs/lab1 \n");
 	DirectoryEntry* opened_lab1 = f_opendir("/Desktop/CS355/labs/lab1");
 	if (opened_lab1 != NULL){
 		print_subdir(opened_lab1);
 	}
 
+	printf("\n7. Attempt to open /Desktop/CS355/labs/lab1/essay (non-existent)\n");
+	DirectoryEntry* opened_essay = f_opendir("/Desktop/CS355/labs/lab1/essay");
+	if (opened_essay == NULL){
+		printf("Cannot open essay because it does not exist.\n");
+	}
+
+	printf("\n==== TESTING F_READDIR() ====\n"); // print statement in f_readdir()
+	printf("1. Read root directory\n");
+	Directory* sub_entries = f_readdir(opened_root);
+
+	printf("\n2. Read /Desktop directory\n");
+	sub_entries = f_readdir(opened_desktop);
+
+	printf("\n3. Read /Download directory\n"); 
+	sub_entries = f_readdir(opened_download);
+
+	printf("\n4. Read /CS355 directory\n");
+	sub_entries = f_readdir(opened_cs355);
+
+	printf("\n5. Read /labs/lab1 directory\n");
+	sub_entries = f_readdir(opened_lab1);
+
+	printf("\n6. Read /labs/lab1/essay directory (non-existent)\n");
+	sub_entries = f_readdir(opened_essay);
+
+	printf("\n7. Read /Hello.txt (not a directory)\n");
+	sub_entries = f_readdir(opened_hello);
+
+}
+
+void test_read_disk_1() {
+	printf("\n==== TESTING F_READ() ====\n");
+
+	printf("Read /Desktop/Blog1.txt\n");
+	printf("1. Open /Desktop/Blog1.txt\n");
+	printf("GRACEEE~~\n");
+
+	// FEED IN THE FILE HANDLE FROM F_OPEN
+	printf("\n2. Read 15 bytes (file size)\n");
+	char buffer[16];
+	int bytes = f_read(NULL, buffer, 15);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\n3. Read 6 bytes only\n");
+	bytes = f_read(NULL, buffer, 6);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	printf("\n4. Attempt to read 1000 bytes (file size exceeded)\n");
+	bytes = f_read(NULL, buffer, 1000);
+	printf("Bytes read: %d\n", bytes);
+	printf("Buffer: %s\n", buffer);
+
+	// will add test case when buffer size is too small
+	
 }
 
 void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
-	test_opendir_disk_1();
+	test_opendir_readdir_disk_1();
+	test_read_disk_1();
 }
 
 
