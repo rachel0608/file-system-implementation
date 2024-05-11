@@ -134,29 +134,29 @@ File Directory:
         This program contains another fake disk.
 
     Makefile
-      This file contains specfics on how to compile the .c file into the
-      specified executable.
+        This file contains specfics on how to compile the .c file into the
+        specified executable.
 
     README.txt
-      Contains the text you see here.
+        Contains the text you see here.
+    
+    README-backend.txt
+        Contains more information about the backend files and how to run them.
+        Contains tests and details on which functions work, are partially working,
+        and have not been implemented.
 
-    datafiles (folder)
-      A folder full of fragmented disk files for resubmission testing.
+    README-frontend.txt
+        Contains more information about the frontend files and how to run them.
+        Contains tests and details on which functions work, are partially working,
+        and have not been implemented.
 
-      The fragmented disk files in the folder:
-        datafile-frag
-        1024-direct
-        1024-empty
-        blocksize
-        empty
-        freelist
-        large
-        large-frag-withfree
-        larger-frag-withfree
-        medium
-        medium2
-        small
-        verify-defragmentation -> used to verify the defragmentation
+    disks (folder)
+        disk_layout.txt
+            Contains information on how each fake disk is laid out.
+        
+        fake_disk_1.img
+        fake_disk_2.img
+            Contains the fake_disks .img
 
 How to Clean:
 =============
