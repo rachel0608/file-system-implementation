@@ -40,28 +40,16 @@ How to Run:
 Implemented Features:
 =====================
     Part 1. Working Commands:
-        - f_open: open the specified file with the specified access. If the
-                  file does not exist, handle accordingly. Returns a file
-                  handle if successful.
+        - f_open
+        - f_read
+        - f_opendir
+        - f_readdir
+        - f_seek
+        - f_rewind
 
-        - f_read: read the specified number of bytes from a file handle at the
-                  current position. Returns the number of bytes read, or an error.
-
-        - f_close: close a file handle.
-
-        - f_opendir: recall that directories are handled as special cases of
-                     files. open a “directory file” for reading, and return a
-                     directory handle.
-        
-        - f_readdir: returns a pointer to a “directory entry” structure
-                     representing the next directory entry in the directory
-                     file specified.
-
-        - f_closedir: close an open directory file.
-
-    Part 2. Not Working or Partially Working/Created Commands:
-        - f_seek: move to a specified position in a file.
-        - f_rewind: move to the start of the file.
+    Part 2. Created but Not Working Commands:
+        - f_close
+        - f_closedir
 
     Part 3. Not Implemented:
         - f_write()
