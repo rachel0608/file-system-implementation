@@ -354,29 +354,6 @@ Directory* f_readdir(DirectoryEntry* entry) {
 		i++;
 	}
 
-	
-	// DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-	// int i = 0;
-
-	// while (bytes_count < BLOCK_SIZE) {
-	// 	// retrieve the first 20 bytes of FAT[0]
-	// 	memcpy(sub_dir, entry + bytes_count, sizeof(DirectoryEntry));
-	// 	print_subdir(sub_dir);
-
-	// 	// check if current entry is valid
-	// 	if (strcmp(sub_dir->filename, "") == 0) {
-	// 		printf("End of dir entry\n");
-	// 		break;
-	// 	}
-
-	// 	sub_dir_arr->entries[i] = *sub_dir;
-
-	// 	// move to the next DirectoryEntry
-	// 	bytes_count += sizeof(DirectoryEntry);
-	// 	// printf("bytes_count: %d\n", bytes_count);
-	// 	i++;
-	// }
-
 	return dir; 
 }
 
@@ -600,7 +577,7 @@ void test_read_disk_1() {
 	// FEED IN THE FILE HANDLE FROM F_OPEN
 	printf("\n2. Read 15 bytes (file size)\n");
 	char buffer[16];
-	int bytes = f_read(NULL, buffer, 15);
+	int bytes = f_read(NULL, buffer, 16);
 	printf("Bytes read: %d\n", bytes);
 	printf("Buffer: %s\n", buffer);
 
@@ -613,8 +590,6 @@ void test_read_disk_1() {
 	bytes = f_read(NULL, buffer, 1000);
 	printf("Bytes read: %d\n", bytes);
 	printf("Buffer: %s\n", buffer);
-
-	// will add test case when buffer size is too small
 	
 }
 
@@ -626,19 +601,11 @@ void test_disk_1() {
 
 
 int main(void) {
+	// Mount fake_disk_2.img
+	fs_mount("./disks/fake_disk_2.img");
+
 	// Mount fake_disk.img
-	test_disk_1();
-
-	// *****
-	// Testing for f_readdir():
-
-	// printf("\n=== testing f_readdir on Desktop ===\n");
-	// Directory* sub_entries = f_readdir(opened_desktop);
-	// print_dir(sub_entries);
-
-	// printf("\n=== testing f_readdir on root ===\n");
-	// sub_entries = f_readdir(opened_root);
-	// print_dir(sub_entries);
+	//test_disk_1();
 
 	// *****
 	// Testing for f_open():
