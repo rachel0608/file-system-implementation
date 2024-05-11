@@ -728,7 +728,7 @@ void test_open_read_disk_1() {
 
 	// Tests for f_seek()
 	printf("\n\n==== TESTING F_SEEK() ====\n");
-	printf("1. Change File Pointer Location for /Desktop/blog_1.txt\n");
+	printf("1. Change File Position Location for /Desktop/blog_1.txt\n");
 	printf("a. Check with SEEK_SET\n");
 	printf("Expected Updated File Position: 1\n");
 
@@ -762,7 +762,7 @@ void test_open_read_disk_1() {
 
 	// Tests for f_rewind()
 	printf("\n\n==== TESTING F_REWIND() ====\n");
-	printf("1. Rewind File Pointer Location for /Desktop/blog_1.txt\n");
+	printf("1. Rewind File Position Location for /Desktop/blog_1.txt\n");
 	printf("Expected Updated File Position: 0\n");
 
 	f_rewind(blog_1);
