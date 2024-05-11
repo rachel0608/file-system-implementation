@@ -22,7 +22,7 @@ datablock *data_section; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
 int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per block
 
 // helper function to compare filename
-bool compare_filename(const char* filename, const DirectoryEntry* dir_entry) {
+bool compare_filename(const char* filename, DirectoryEntry* dir_entry) {
 	// printf("comparing dir/file names:\n");
 	// printf("given directory name: %s\n", filename);
 	// printf("subdir found: %s\n", dir_entry->filename);
@@ -284,48 +284,57 @@ DirectoryEntry* f_opendir(char* directory) {
 		printf("Directory opened: %s\n", directory);
 		return &root_dir_entry;
 	}
-	for (int i = 0; i < num_dir_per_block; i++) {
-		DirectoryEntry* sub_dir = &root_dir->entries[i];
-		// print_subdir(sub_dir);
 
-		// check if the filename matches
-		if (compare_filename(directory, sub_dir)) {
-			if (sub_dir->type == 1){
-				printf("Directory opened: %s\n", directory);
-				return sub_dir;
-			} else {
-				printf("f_opendir: %s is not a directory \n", directory);
-				return NULL;
-			}
+	char temp[strlen(directory) + 1];
+    strcpy(temp, directory);
+    
+    char *token = strtok(temp, "/");
+    
+    // first token is "/", skip
+    if (strcmp(token, "") == 0) {
+        token = strtok(NULL, "/");
+    }
+
+    DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+
+	Directory* current_dir = root_dir; // traverse from root
+
+    while (token != NULL) {
+        printf("looking up dir: %s\n", token);
+		int found_dir = 0;
+
+		if (current_dir == NULL){
+			printf("f_opendir: cannot find given dir, %s. \n", token);
+			return NULL;
+		}
+
+		for (int i = 0; i < num_dir_per_block; i++) {
+			sub_dir = &current_dir->entries[i];
 			
-		} 
-	}
+			// check if the filename matches
+			if (compare_filename(token, sub_dir)) {
+				if (sub_dir->type == 1){
+					printf("found dir: %s\n", token);
+					found_dir = 1;
+					break;
+				}
+			}
+		}
 
-	// // look into FAT[0], find a DirectoryEntry with the same filename
-	// int bytes_count = 0;
-	// DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+		if (found_dir == 0){
+			printf("f_opendir: cannot find given dir, %s. \n", token);
+			return NULL;
+		}
 
-	// while (bytes_count < BLOCK_SIZE) {
-	// 	// retrieve the first 20 bytes of FAT[0]
-	// 	memcpy(sub_dir, root_dir + bytes_count, sizeof(DirectoryEntry));
-	// 	//print_subdir(sub_dir);
+        token = strtok(NULL, "/");
 
-	// 	// check if the filename matches
-	// 	if (compare_filename(directory, sub_dir)) {
-	// 		if (sub_dir->type == 1){
-	// 			printf("Directory opened: %s\n", directory);
-	// 			return sub_dir;
-	// 		} else {
-	// 			printf("f_opendir: %s is not a directory \n", directory);
-	// 			return NULL;
-	// 		}
-	// 	} else {
-	// 		// move to the next DirectoryEntry
-	// 		bytes_count += sizeof(DirectoryEntry);
-	// 	}
-	// }
-	printf("f_opender: given directory not found. \n");
-	return NULL;
+		current_dir = f_readdir(sub_dir);
+    }
+
+	printf("dir found ---\n");
+	print_subdir(sub_dir);
+
+	return sub_dir;
 }
 
 int f_closedir(DirectoryEntry* dir_entry) {
@@ -338,20 +347,23 @@ int f_closedir(DirectoryEntry* dir_entry) {
     return 0;
 }
 
-// need to debug a bit - Cecilia
+// need more testing
 Directory* f_readdir(DirectoryEntry* entry) {
-	// look into FAT[0], find a DirectoryEntry with the same filename
-	// int bytes_count = 0;
-
 	// error check
 	if (entry == NULL) {
-		printf("ERROR: Directory entry is NULL.\n");
+		printf("readdir: given NULL entry.\n");
 		return NULL;
 	}
 
 	// array of all dir entry
 	Directory* dir = (Directory*)malloc(sizeof(Directory));
 	dir = (Directory *) data_section[entry->first_logical_cluster].buffer;
+
+	// check if empty directory
+	if (strcmp(dir->entries[0].filename, "") == 0){
+		printf("readdir: empty directory entries. Returning NULL.\n");
+		return NULL;
+	}
 
 	printf("Entry 1 %s\n", dir->entries[0].filename);
     printf("Entry 2 %s\n", dir->entries[1].filename);
@@ -507,55 +519,60 @@ int main(void) {
 	// *****
 	// Testing for f_opendir():
 
-	printf("=== testing f_opendir open root dir ===\n");
-	DirectoryEntry* opened_root = f_opendir("/");
-	printf("opened directory: \n");
-	print_subdir(opened_root);
-	printf("opendir(/) done\n \n");
+	// printf("=== testing f_opendir open root dir ===\n");
+	// DirectoryEntry* opened_root = f_opendir("/");
+	// if (opened_root != NULL){
+	// 	printf("opened directory: \n");
+	// 	print_subdir(opened_root);
+	// 	printf("opendir(/) done\n \n");
+	// }
+	
 
-	printf("=== testing f_opendir open Desktop dir ===\n");
-	DirectoryEntry* opened_desktop = f_opendir("Desktop");
-	printf("opened directory: \n");
-	print_subdir(opened_desktop);
-	printf("opendir(Desktop) done\n \n");
-
-	printf("=== testing f_opendir open Download dir ===\n");
-	DirectoryEntry* opened_download = f_opendir("Download");
-	if (opened_download != NULL){
-		printf("opened directory: \n");
-		print_subdir(opened_download);
-		printf("opendir(Download) done\n \n");
+	printf("=== testing f_opendir open CS355 dir ===\n");
+	DirectoryEntry* opened_cs355 = f_opendir("/Desktop/CS355");
+	if (opened_cs355 != NULL){
+		printf("\nverifying dir: \n");
+		print_subdir(opened_cs355);
+		printf("opendir(cs355) done\n \n");
 	}
 
-	printf("\n=== testing f_opendir open Hello.txt ===\n");
-	DirectoryEntry* opened_hello = f_opendir("Hello.txt");
-	if (opened_hello != NULL){
-		printf("opened directory: \n");
-		print_subdir(opened_hello);
-		printf("opendir(Hello.txt) done\n \n");
-	}
+	// printf("=== testing f_opendir open Download dir ===\n");
+	// DirectoryEntry* opened_download = f_opendir("/Download");
+	// if (opened_download != NULL){
+	// 	printf("opened directory: \n");
+	// 	print_subdir(opened_download);
+	// 	printf("opendir(Download) done\n \n");
+	// }
+
+	// printf("\n=== testing f_opendir open Hello.txt ===\n");
+	// DirectoryEntry* opened_hello = f_opendir("Hello.txt");
+	// if (opened_hello != NULL){
+	// 	printf("opened directory: \n");
+	// 	print_subdir(opened_hello);
+	// 	printf("opendir(Hello.txt) done\n \n");
+	// }
 
 	// *****
 	// Testing for f_readdir():
 
-	printf("\n=== testing f_readdir on Desktop ===\n");
-	Directory* sub_entries = f_readdir(opened_desktop);
-	print_dir(sub_entries);
+	// printf("\n=== testing f_readdir on Desktop ===\n");
+	// Directory* sub_entries = f_readdir(opened_desktop);
+	// print_dir(sub_entries);
 
-	printf("\n=== testing f_readdir on root ===\n");
-	sub_entries = f_readdir(opened_root);
-	print_dir(sub_entries);
+	// printf("\n=== testing f_readdir on root ===\n");
+	// sub_entries = f_readdir(opened_root);
+	// print_dir(sub_entries);
 
 	// *****
 	// Testing for f_open():
 
-	printf("\n=== testing f_open on Hello.txt ===\n");
-	// char buffer[20];
-	FileHandle* file = f_open("/Hello.txt", "r");
-	print_filehandle(file);
+	// printf("\n=== testing f_open on Hello.txt ===\n");
+	// // char buffer[20];
+	// FileHandle* file = f_open("/Hello.txt", "r");
+	// print_filehandle(file);
 
-	FileHandle* file2 = f_open("/Hello.txt", "r");
-	print_filehandle(file2);
+	// FileHandle* file2 = f_open("/Hello.txt", "r");
+	// print_filehandle(file2);
 
 	// printf("\n=== testing f_open on blog_1.txt ===\n");
 	// // char buffer[20];
@@ -570,22 +587,22 @@ int main(void) {
 	// *****
 	// Testing for f_read():
 	
-	printf("\n=== testing f_read on Hello.txt ===\n");
-	char buffer[20];
-	printf("Attempting to read 7 bytes\n");
-	int bytes = f_read(NULL, buffer, 7);
-	printf("bytes read: %d\n", bytes);
-	printf("buffer: %s\n", buffer);
+	// printf("\n=== testing f_read on Hello.txt ===\n");
+	// char buffer[20];
+	// printf("Attempting to read 7 bytes\n");
+	// int bytes = f_read(NULL, buffer, 7);
+	// printf("bytes read: %d\n", bytes);
+	// printf("buffer: %s\n", buffer);
 
-	printf("Attempting to read 5 bytes\n");
-	bytes = f_read(NULL, buffer, 5);
-	printf("bytes read: %d\n", bytes);
-	printf("buffer: %s\n", buffer);
+	// printf("Attempting to read 5 bytes\n");
+	// bytes = f_read(NULL, buffer, 5);
+	// printf("bytes read: %d\n", bytes);
+	// printf("buffer: %s\n", buffer);
 
-	printf("Attempting to read 100 bytes\n");
-	bytes = f_read(NULL, buffer, 100);
-	printf("bytes read: %d\n", bytes);
-	printf("buffer: %s\n", buffer);
+	// printf("Attempting to read 100 bytes\n");
+	// bytes = f_read(NULL, buffer, 100);
+	// printf("bytes read: %d\n", bytes);
+	// printf("buffer: %s\n", buffer);
 
 	// ----------------------------------------
 
