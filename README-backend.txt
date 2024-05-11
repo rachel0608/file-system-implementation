@@ -2,7 +2,7 @@ README for filesystem (back end) ===============================================
 
 NAME:
 =====
-    Cecilia Zhang, Grace Choe, Julia Rieger, and Rachel Nguyen
+    Grace Choe, Cecilia Zhang, Julia Rieger, and Rachel Nguyen
 
 Program Files:
 ==============
@@ -37,8 +37,8 @@ How to Run:
 * Can also compile each fake_disk individually using: ./fake_disk_1
                                                       ./fake_disk_2
 
-Implemented Features & How to Test:
-===================================
+Implemented Features:
+=====================
     Part 1. Working Commands:
         - f_open: open the specified file with the specified access. If the
                   file does not exist, handle accordingly. Returns a file
@@ -71,6 +71,9 @@ Implemented Features & How to Test:
         - f_rmdir()
         - f_mount() (Extra Credit not done)
         - f_umount() (Extra Credit not done)
+
+How to Test:
+============
 
 Limitations:
 ============

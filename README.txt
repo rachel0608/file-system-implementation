@@ -110,28 +110,28 @@ Summary of Features and EC Completed:
 File Directory:
 ===============
     shell.c:
-      This is a header file that contains structs for superblock and inode and
-      other function declarations for defrag.c.
+        This is program to implement functions for the shell (front end).
 
     filesystem.h:
+        This is a header file for the filesystem.
     
     filesystem.c:
+        This is program to implement functions for the filesystem (back end).
     
     format.c:
+        This is program to format the disk.
     
     fat.h:
+        This is the header for FAT.
     
     fat.c:
+        This is the implementation for FAT.
     
     fake_disk_1.c:
+        This program contains a fake disk.
     
     fake_disk_2.c:
-      This program is an implementation of a disk defragmenter for a Unix-like
-      (inode-based) file system. File system defragmenters improve performance
-      by compacting all the blocks of a file into sequential order on disk.
-
-    datafile-frag:
-      The given fragmented disk file for testing (now in the datafiles folder).
+        This program contains another fake disk.
 
     Makefile
       This file contains specfics on how to compile the .c file into the

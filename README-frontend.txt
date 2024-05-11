@@ -2,7 +2,7 @@ README for shell (front end) ===================================================
 
 NAME:
 =====
-    Cecilia Zhang, Grace Choe, Julia Rieger, and Rachel Nguyen
+    Grace Choe, Cecilia Zhang, Julia Rieger, and Rachel Nguyen
 
 Program Files:
 ==============
