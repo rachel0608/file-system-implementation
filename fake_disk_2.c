@@ -1,23 +1,33 @@
-/*
-Layout: superblock (1) (0) | FAT (8) (1-8) | FREEMAP (1) (9) | ROOTDIR (1) (10) | DATA (11 reserved, start at 12)
-
-Data Section:
-Logical cluster 0 (physical cluster 11) is reserved for root directory
-1 is content of folder1 
-2 is content of folder2 (empty)
-3 is content of file1.txt
-4 marks EOF for file1.txt 
-5 is content of folder_a
-
-Superblock:
-File size: 1 MB
-FAT offset: 1
-Free map offset: 9
-Root directory offset: 10
-Data offset: 12
-Block size: 512
-File size in blocks: 2048
-*/ 
+/**
+ * fake_disk_2.c
+ * Authors: czhang, gchoe, jrieger, rnguyen
+ * Date: 5/11/2024
+ * 
+ * Description:
+ * Implementation of a fake disk.
+ *
+ * Layout: superblock (1) (0) | FAT (8) (1-8) | FREEMAP (1) (9) | ROOTDIR (1) (10) | DATA (11 reserved, start at 12)
+ *
+ * Layout of the fake_disk_2.c:
+ * - `fake_disk_2.c` generates 'fake_disk_2.img' (3-level) with 4 folders and 1 file
+ *    root
+ *    |__ folder1
+ *    |   |__ folder_a
+ *    |   |__ folder_b (only in fake_disk_4_folders.img)
+ *    |
+ *    |__ folder2 (empty)
+ *    |
+ *    |__ Hello.txt (contains data "Hello")
+ * 
+ * Superblock:
+ * File size: 1 MB
+ * FAT offset: 1
+ * Free map offset: 9
+ * Root directory offset: 10
+ * Data offset: 12
+ * Block size: 512
+ * File size in blocks: 2048
+ */
 
 #include <stdio.h>
 #include <stdint.h>

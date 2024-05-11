@@ -1,4 +1,11 @@
-// compile: gcc shell.c -o shell -lreadline
+/**
+ * shell.c
+ * Authors: czhang, gchoe, jrieger, rnguyen
+ * Date: 5/11/2024
+ * 
+ * Description:
+ * Implementation of the frontend/shell.
+ */
 
 #define _POSIX_SOURCE 199309L
 #define _XOPEN_SOURCE 700

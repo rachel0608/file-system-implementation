@@ -1,4 +1,8 @@
-Disk Layout
+disk_layout.txt
+Authors: czhang, gchoe, jrieger, rnguyen
+Date: 5/11/2024
+
+Disk Layout for fake_disk_1 and fake_disk_2:
 
 - `fake_disk_1.c` generates `fake_disk_1.img` (5-level) with 5 folders and 3 files
     root

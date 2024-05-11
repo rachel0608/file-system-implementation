@@ -1,3 +1,12 @@
+/**
+ * filesystem.h
+ * Authors: czhang, gchoe, jrieger, rnguyen
+ * Date: 5/11/2024
+ * 
+ * Description:
+ * A header for the filesystem.
+ */
+
 #ifndef FILESYSTEM_H
 #define FILESYSTEM_H
 

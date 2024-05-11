@@ -1,3 +1,12 @@
+/**
+ * fat.h
+ * Authors: czhang, gchoe, jrieger, rnguyen
+ * Date: 5/11/2024
+ * 
+ * Description:
+ * A header for FAT.
+ */
+
 #ifndef FAT_H
 #define FAT_H
 

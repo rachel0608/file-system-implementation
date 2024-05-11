@@ -1,3 +1,13 @@
+/**
+ * bitmap.c
+ * Authors: czhang, gchoe, jrieger, rnguyen
+ * Date: 5/11/2024
+ * 
+ * Description:
+ * Implementation of basic operatinos for managing a bitmap to track block
+ * allocation status within a file system.
+ */
+
 #include <stdio.h>
 #include <string.h>
 

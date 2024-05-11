@@ -1,3 +1,14 @@
+/**
+ * format.c
+ * Authors: czhang, gchoe, jrieger, rnguyen
+ * Date: 5/11/2024
+ * 
+ * Description:
+ * Implementation and initialization of a disk image with a custom file system
+ * structure, including a superblock, FAT table, bitmap for block allocation,
+ * and a root directory.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,7 +84,6 @@ void test_bitmap(FILE *disk_image, superblock sb);
 void initialize_rootdir(FILE *disk_image, superblock sb);
 
 int main(int argc, char *argv[]) {
-
     // Parse command-line arguments
     if (argc < EXPECTED_ARGS) {
         fprintf(stderr, "Usage: %s <filename> -s <num MB requested>\n", EXECUTABLE);
@@ -87,7 +97,7 @@ int main(int argc, char *argv[]) {
         disk_size_mb = atoi(FLAG_PARAM);
     }
 
-    // Open to write- initialize disk image with Superblock, FAT, Bitmap, RootDirEntry
+    // open to write- initialize disk image with Superblock, FAT, Bitmap, RootDirEntry
     FILE *disk_image = fopen(filename, "wb"); //write to size disk_size_mb
     
     superblock sb = initialize_superblock(disk_image, disk_size_mb);
@@ -97,7 +107,7 @@ int main(int argc, char *argv[]) {
 
     fclose(disk_image);
 
-    //Open to read
+    // open to read
     disk_image = fopen(filename, "rb"); //write to size disk_size_mb
 
     fclose(disk_image);
@@ -108,7 +118,6 @@ int main(int argc, char *argv[]) {
 
 //calculate DS sizes and init & write superblock
 superblock initialize_superblock(FILE *disk_image, int disk_size_mb) {
-
     superblock sb;
     sb.block_size = BLOCKSIZE;
     sb.file_size_mb = disk_size_mb;
@@ -132,7 +141,6 @@ superblock initialize_superblock(FILE *disk_image, int disk_size_mb) {
 }
 
 void initialize_fat(FILE *disk_image, superblock sb) {
-
     //each block of FAT has 256 entries
     int num_blocks = sb.file_size_blocks;
 
@@ -149,11 +157,9 @@ void initialize_fat(FILE *disk_image, superblock sb) {
     fwrite(fat_table, (num_blocks * sizeof(FATEntry)), 1, disk_image);
 
     free(fat_table);
-
 }
 
 void initialize_bitmap(FILE *disk_image, superblock sb) {
-
     BitmapBlock bitmap_block;
 
     // Initialize the bitmap block with all bits set to 1 (indicating free) except first reserved block
@@ -173,7 +179,6 @@ void initialize_bitmap(FILE *disk_image, superblock sb) {
 
 void initialize_rootdir(FILE *disk_image, superblock sb) {
     //the root dir block will be a normal dirEntry that points to the first datablock, reserved for rootdir contents
-
     DirectoryEntry root_dir_entry;
     strcpy(root_dir_entry.filename, "/"); //filename of root directory entry should be "/"
     root_dir_entry.first_logical_cluster = ROOTDIR; //points to first datablock-> holds directory for root level
@@ -193,7 +198,6 @@ void initialize_rootdir(FILE *disk_image, superblock sb) {
 
     fseek(disk_image, (BLOCKSIZE * (sb.DATA_offset + ROOTDIR)), SEEK_SET); // Move to first block in data section
     fwrite(&root_dir, sizeof(Directory), 1, disk_image); //Directory will take up the first reserved block
-    
 }
 
 void test_sb(superblock sb) {
@@ -207,16 +211,13 @@ void test_sb(superblock sb) {
 }
 
 void test_readsb(FILE *disk_image) {
-
     superblock sb;
     fseek(disk_image, 0, SEEK_SET);
     fread(&sb, sizeof(superblock), 1, disk_image);
     test_sb(sb);
-
 }
 
 void test_readfat(FILE *disk_image, superblock sb) {
-
     FATEntry fat_entries[sb.file_size_blocks];
 
     // Read FAT entries from disk
@@ -226,11 +227,9 @@ void test_readfat(FILE *disk_image, superblock sb) {
     for (int i = 0; i < (int) sb.file_size_blocks; i++) {
         printf("fat cell %d: %d\n", i, fat_entries[i].block_number);
     }
-
 }
 
 void test_fat_end_of_chain(FILE *disk_image, superblock sb) {
-
     FATEntry fat_entries[sb.file_size_blocks];
 
     // Read FAT entries from disk
@@ -251,12 +250,10 @@ void test_fat_end_of_chain(FILE *disk_image, superblock sb) {
     
     // Verify that last cluster in chain points to end of chain
     printf("Last cluster in chain: %d\n", current_cluster);
-
 }
 
 void test_cluster_allocation(FILE *disk_image, superblock sb) {
     // Assuming you have initialized FATEntry array and disk_image file pointer
-
     FATEntry fat_entries[sb.file_size_blocks];
 
     // Read FAT entries from disk

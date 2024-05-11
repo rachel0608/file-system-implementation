@@ -1,3 +1,12 @@
+/**
+ * fat.c
+ * Authors: czhang, gchoe, jrieger, rnguyen
+ * Date: 5/11/2024
+ * 
+ * Description:
+ * Implementation of FAT.
+ */
+
 // find the directory entry for a file 
 DirectoryEntry* find_file(char* filename){
     // Traverse through directory entries and compare filenames

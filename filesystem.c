@@ -1,4 +1,12 @@
-// filesystem.c
+/**
+ * filesystem.c
+ * Authors: czhang, gchoe, jrieger, rnguyen
+ * Date: 5/11/2024
+ * 
+ * Description:
+ * Implementation of the filesystem.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
