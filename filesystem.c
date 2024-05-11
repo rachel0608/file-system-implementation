@@ -368,7 +368,7 @@ Directory* f_readdir(DirectoryEntry* entry) {
 
 // helper func to read 1 block of data
 char* read_block(int cluster) {
-	if (cluster < 0 || cluster >= sb.file_size_blocks) {
+	if (cluster < 0 || cluster >= 65535) {
 		printf("ERROR: Block number is out of bounds.\n");
 		return NULL;
 	}
