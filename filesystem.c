@@ -544,7 +544,7 @@ void test_opendir_disk_1() {
 }
 
 void test_disk_1() {
-	fs_mount("./disks/fake_disk.img");
+	fs_mount("./disks/fake_disk_1.img");
 	test_opendir_disk_1();
 }
 
