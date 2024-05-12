@@ -36,24 +36,18 @@ typedef struct {
 
 FileHandle* f_open(char* path, char* access); // access = w/w+, r/r+, a/a+ maybe add group later as param
 int f_read(FileHandle *file, void* buffer, int bytes);
-int f_write(FileHandle file, void* buffer, size_t bytes);
 int f_close(FileHandle* file);
 int f_seek(FileHandle* file, long offset, int whence);
-int f_remove(const char* path);
-// void f_rewind(FileHandle file);
-// int f_stat(FileHandle file, struct stat *buffer);
+void f_rewind(FileHandle* file);
 DirectoryEntry* f_opendir(char* path);
 Directory* f_readdir(DirectoryEntry* entry);
-// int f_closedir(DirectoryEntry* dir_entry);
+int f_closedir(DirectoryEntry* dir_entry);
+void fs_mount(char *diskname); //Extra Credit
+
+int f_write(FileHandle file, void* buffer, size_t bytes);
+int f_remove(const char* path);
+//int f_stat(FileHandle file, struct stat *buffer);
 int f_mkdir(char* path);
 int f_rmdir(char* path);
-void fs_mount(char *diskname);
-// int f_mkdir(char* path);
-// int f_rmdir(char* path);
-// void fs_mount(char *diskname);
-
-// f_mount(); // Extra credit
-// f_umount(); // Extra credit
 
 #endif
-
