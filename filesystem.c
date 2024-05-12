@@ -214,14 +214,12 @@ int f_close(FileHandle* file) {
 
 	free(file);
 	return 0;
-}
 
-// more cleanup?
+	// more cleanup?
 	// TODO: Remove dir_entry's FileHandle from the global open files array
 	// Concern: How do we compare DirectoryEntry and FileHandle?????
 	// FileHandle* open_dirs[MAX_DIRS];
-
-// int f_write(FileHandle file, void* buffer, size_t bytes);
+}
 
 int f_seek(FileHandle* file, long offset, int whence) {
     if (file == NULL) {
@@ -267,10 +265,6 @@ void f_rewind(FileHandle* file) {
 
     // printf("File pointer rewound to the start of the file.\n"); // Success message~!
 }
-
-// int f_stat(FileHandle file, struct stat *buffer);
-// int f_remove(const char* filename);
-
 
 // Open a directory 
 // Currently open in root directory
@@ -474,6 +468,26 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 	printf("Successfully read %d bytes from the file.\n", bytes_read);
 
 	return bytes_read;
+}
+
+int f_write(FileHandle file, void* buffer, size_t bytes) {
+
+}
+
+int f_remove(const char* path) {
+
+}
+
+int f_stat(FileHandle file, struct stat *buffer) {
+
+}
+
+int f_mkdir(char* path) {
+
+}
+
+int f_rmdir(char* path) {
+
 }
 
 // to be called before the mainloop
