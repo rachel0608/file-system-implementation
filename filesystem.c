@@ -23,12 +23,7 @@
 #define END_OF_FILE 0 // FAT entry value for end of file
 
 FileHandle* opened_dirs[MAX_DIRS] = { NULL }; // All files that are open
-superblock sb;
-FATEntry *FAT;
-BitmapBlock bitmap;
-DirectoryEntry root_dir_entry;
-Directory *root_dir;
-datablock *data_section; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
+
 int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per block
 
 // helper function to compare filename
@@ -119,6 +114,19 @@ char* find_relative_path(char* path) { // last part of the path
 		printf("No ‘/’ found in the string.\n");
 		return path;
 	}
+}
+
+char *extract_filename(const char *path) {
+    // Find the last occurrence of '/' in the path
+    const char *last_slash = strrchr(path, '/');
+
+    // If no slash found, return the original path
+    if (last_slash == NULL) {
+        return strdup(path);
+    }
+
+    // Return a pointer to the character after the last slash
+    return strdup(last_slash + 1);
 }
 
 FileHandle* f_open(char* path, char* access) { 
@@ -470,15 +478,68 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 	return bytes_read;
 }
 
-int f_write(FileHandle file, void* buffer, size_t bytes) {
+int f_write(FileHandle *file, void *buffer, size_t bytes) {
+    if (file == NULL || buffer == NULL) {
+        return -1; // Invalid arguments
+    }
 
+    // Get the start cluster of the file
+    FATEntry *start_cluster = file->first_logical_cluster;
+
+    // Calculate the current file size
+    uint32_t current_file_size = file->file_size;
+
+    // Calculate the new file size after writing
+    uint32_t new_file_size = current_file_size + bytes;
+
+    // Calculate the number of clusters needed to store the new data
+    uint32_t new_clusters_needed = (new_file_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+    // Allocate additional clusters if necessary
+    if (new_clusters_needed > file->file_size/BLOCK_SIZE) {
+        fat_allocate_cluster_chain(start_cluster, file->first_logical_cluster, new_file_size);
+    }
+
+    // Write the data into the file clusters
+    uint8_t *data_ptr = (uint8_t *)buffer;
+    uint32_t remaining_bytes = bytes;
+    uint32_t bytes_written = 0;
+
+    while (remaining_bytes > 0) {
+        // Calculate the offset within the current cluster
+        uint32_t cluster_offset = current_file_size % BLOCK_SIZE;
+
+        // Calculate the number of bytes to write in this iteration
+        uint32_t bytes_to_write = remaining_bytes;
+        if (bytes_to_write > (BLOCK_SIZE - cluster_offset)) {
+            bytes_to_write = BLOCK_SIZE - cluster_offset;
+        }
+
+        // Write data to the file using fat_read_file_contents
+        fat_read_file_contents(start_cluster, current_file_size + bytes_written, data_ptr);
+
+        // Update pointers and counters
+        data_ptr += bytes_to_write;
+        bytes_written += bytes_to_write;
+        remaining_bytes -= bytes_to_write;
+    }
+
+	const char *path = file->abs_path;
+	char *extracted_filename = extract_filename(path);
+
+    // Update the file size in the directory entry
+    fat_update_directory_entry(extracted_filename, start_cluster, new_file_size);
+
+	free(extracted_filename);
+    // Return the number of bytes written
+    return bytes_written;
 }
 
 int f_remove(const char* path) {
 
 }
 
-int f_stat(FileHandle file, struct stat *buffer) {
+int f_stat(FileHandle *file, struct stat *buffer) {
 
 }
 
