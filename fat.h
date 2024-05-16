@@ -11,6 +11,8 @@
 #define FAT_H
 
 #define BLOCK_SIZE 512
+#define FREEBLOCK 65535
+#define END_OF_FILE 0
 
 // Root directory is also a directory entry
 typedef struct {
@@ -37,28 +39,19 @@ typedef struct {
     char buffer[BLOCK_SIZE];
 } datablock; //holds a block of data
 
-extern FATEntry *FAT;
-extern BitmapBlock bitmap;
-extern DirectoryEntry root_dir_entry;
-extern Directory *root_dir;
-extern datablock *data_section; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
-
 // find the directory entry for a file 
 DirectoryEntry* find_file(char* filename);
 
 // read file contents from clusters
-void fat_read_file_contents(FATEntry *start_cluster, uint32_t file_size, uint8_t buffer);
+void fat_read_file_contents(FATEntry *start_cluster, uint32_t file_size, uint8_t *buffer);
 
 // allocate a chain of clusters for a new file
-void fat_allocate_cluster_chain(FATEntry* start_cluster, uint32_t file_size);
+void fat_allocate_cluster_chain(FATEntry* start_cluster, uint16_t start_cluster_idx, uint32_t file_size);
 
 // update directory entry for a file   
 void fat_update_directory_entry(const char* filename, FATEntry *start_cluster, uint32_t file_size);
 
 // free clusters allocated to a file
 void fat_free_cluster_chain(FATEntry *start_cluster);
-
-// update bit at given index to given value (0 = use, 1 = free)
-void update_bitmap(BitmapBlock *bitmap, int index, int value);
 
 #endif
