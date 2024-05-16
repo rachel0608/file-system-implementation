@@ -54,7 +54,7 @@ Directory* f_readdir(DirectoryEntry* entry);
 int f_closedir(DirectoryEntry* dir_entry);
 void fs_mount(char *diskname); //Extra Credit??
 
-int f_write(FileHandle file, void* buffer, size_t bytes);
+int f_write(FileHandle *file, void* buffer, size_t bytes);
 int f_remove(const char* path);
 //int f_stat(FileHandle file, struct stat *buffer);
 int f_mkdir(char* path);
