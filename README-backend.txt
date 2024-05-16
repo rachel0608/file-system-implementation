@@ -57,7 +57,6 @@ Implemented Features:
         - f_write()
 
     Part 3. Not Implemented:
-        - f_write()
         - f_stat()
         - f_remove()
         - f_mkdir()
@@ -87,7 +86,7 @@ How Testing Was Done: (Used Print/Testing Statements to Terminal)
         3. Open /Download directory
         Filename: Download
         Extension:
-        First logical cluster: 65535 (note: max int value representing empty, since Download is an empty directory)
+        First logical cluster: 65535 (empty)
 
         4. Attempt to open /Hello.txt (not a directory)
         f_opendir: cannot find given dir, Hello.txt.
