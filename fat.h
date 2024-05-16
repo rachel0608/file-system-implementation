@@ -37,6 +37,12 @@ typedef struct {
     char buffer[BLOCK_SIZE];
 } datablock; //holds a block of data
 
+extern FATEntry *FAT;
+extern BitmapBlock bitmap;
+extern DirectoryEntry root_dir_entry;
+extern Directory *root_dir;
+extern datablock *data_section; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
+
 // find the directory entry for a file 
 DirectoryEntry* find_file(char* filename);
 
@@ -51,5 +57,8 @@ void fat_update_directory_entry(const char* filename, FATEntry *start_cluster, u
 
 // free clusters allocated to a file
 void fat_free_cluster_chain(FATEntry *start_cluster);
+
+// update bit at given index to given value (0 = use, 1 = free)
+void update_bitmap(BitmapBlock *bitmap, int index, int value);
 
 #endif

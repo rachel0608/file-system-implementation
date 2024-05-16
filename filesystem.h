@@ -15,6 +15,14 @@
 #include <stdint.h>
 #include "fat.h"
 
+// Seek offset constants
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define MAX_DIRS 100
+#define EMPTY 65535 // first_logical_cluster value for empty directory
+#define END_OF_FILE 0 // FAT entry value for end of file
+
 typedef struct {
     uint8_t file_size_mb;       // file size in MB (default is 1MB)
     uint8_t FAT_offset;         // offset of first FAT block location
@@ -33,6 +41,8 @@ typedef struct {
 	int position;               // File position
     uint32_t file_size;
 } FileHandle; // FileHandle loosely based on Unix systems’s FileHandle (may not need?)
+
+extern superblock sb;
 
 FileHandle* f_open(char* path, char* access); // access = w/w+, r/r+, a/a+ maybe add group later as param
 int f_read(FileHandle *file, void* buffer, int bytes);

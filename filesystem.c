@@ -14,22 +14,23 @@
 #include "filesystem.h"
 #include "fat.h"
 
-// Seek offset constants
-#define SEEK_SET 0
-#define SEEK_CUR 1
-#define SEEK_END 2
-#define MAX_DIRS 100
-#define EMPTY 65535 // first_logical_cluster value for empty directory
-#define END_OF_FILE 0 // FAT entry value for end of file
+// moved to filesystem.h
+// #define SEEK_SET 0
+// #define SEEK_CUR 1
+// #define SEEK_END 2
+// #define MAX_DIRS 100
+// #define EMPTY 65535 // first_logical_cluster value for empty directory
+// #define END_OF_FILE 0 // FAT entry value for end of file
 
 FileHandle* opened_dirs[MAX_DIRS] = { NULL }; // All files that are open
 
+// define the extern variables declared in fat.h
 superblock sb;
-FATEntry *FAT;
+FATEntry *FAT = NULL;
 BitmapBlock bitmap;
 DirectoryEntry root_dir_entry;
-Directory *root_dir;
-datablock *data_section; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
+Directory *root_dir = NULL;
+datablock *data_section = NULL; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
 
 int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per block
 
@@ -204,6 +205,8 @@ FileHandle* f_open(char* path, char* access) {
 		return file;
 	}
 
+	// adding failed
+	free(file);
 	return NULL;
 }
 
@@ -379,8 +382,7 @@ Directory* f_readdir(DirectoryEntry* entry) {
 	}
 
 	// array of all dir entry
-	Directory* dir = (Directory*)malloc(sizeof(Directory));
-	dir = (Directory *) data_section[entry->first_logical_cluster].buffer;
+	Directory* dir = (Directory *) data_section[entry->first_logical_cluster].buffer;
 
 	// check if empty directory
 	if (strcmp(dir->entries[0].filename, "") == 0){
@@ -567,7 +569,7 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 // 	return 0;
 // }
 
-// to be called before the mainloop
+// to be called before the mainloop or testing
 void fs_mount(char *diskname) {
 	printf("==== MOUNTING... ====\n");
 	// extern superblock, FAT, bitmap, rootdir, data_section globals declared in header, defined in this func
@@ -595,7 +597,11 @@ void fs_mount(char *diskname) {
 	fseek(disk, BLOCK_SIZE * sb.FAT_offset, SEEK_SET);
 	fread(FAT, (sb.file_size_blocks * sizeof(FATEntry)), 1, disk);
 	printf("FAT Info:\n");
-	for (int i = 0; i < 10; i++) {
+	int iter = 10;
+	if ((int)sb.file_size_blocks < 10){
+		iter = (int)sb.file_size_blocks;
+	}
+	for (int i = 0; i < iter; i++) {
 	    //replace 10 with sb.file_size_blocks to print entire data section
         printf("FAT cell %d: %d\n", i, FAT[i].block_number); 
 	}
@@ -623,11 +629,15 @@ void fs_mount(char *diskname) {
     data_section = (datablock *)malloc(sb.file_size_blocks * sizeof(datablock));
 	fseek(disk, BLOCK_SIZE * sb.DATA_offset, SEEK_SET); // Move to first block in data section
 	fread(data_section, BLOCK_SIZE, sb.file_size_blocks, disk); //Directory is size: 512 bytes
-	printf("Data section (only 10 blocks shown): \n");
+	printf("Data section in use (max first 10 blocks): \n");
 	printf("If directory, print the first entry\n");
-    for (int i = 0; i < 10; i++) {
-        //replace 10 with sb.file_size_blocks to print entire data section
-        printf("Block %d: %s\n", i, data_section[i].buffer);
+
+    for (int i = 0; i < iter; i++) {
+        // replace 10 with sb.file_size_blocks to print entire data section
+		// print block content only if in use
+		if (bitmap.bitmap[i] == 0){
+			printf("Block %d: %s\n", i, data_section[i].buffer);
+		}
     }
     printf("\n");
 
@@ -784,8 +794,6 @@ void test_opendir_readdir_disk_1() {
 		printf("close failed!!!\n");
 		printf("Fail expected -- Null entry \n");
 	}
-
-	// TODO: free DIR sub_entries as well?
 }
 
 void test_hardcoded_fread_disk_1() {
@@ -930,9 +938,13 @@ void test_open_read_disk_1() {
 
 void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
-	test_opendir_readdir_disk_1();
+	// test_opendir_readdir_disk_1();
 	// test_hardcoded_fread_disk_1();
 	test_open_read_disk_1();
+
+	// free from fs_mount
+	free(FAT);
+	free(data_section);
 }
 
 int main(void) {

@@ -72,7 +72,7 @@ How Testing Was Done: (Used Print/Testing Statements to Terminal)
   To shorten this README, these prints are truncated.
 
 * Running the ./filesystem will show the tests in its entirety.
-
+    === tests included in test_opendir_readdir_disk_1() ===
     - f_opendir (prints out the directory entry returned)
         1. Open root directory
         Filename: /
@@ -165,6 +165,8 @@ How Testing Was Done: (Used Print/Testing Statements to Terminal)
         close failed!!!
         Fail expected -- Null entry 
 
+
+    === tests included in test_open_read_disk_1() ===
     - f_open (prints out the file handle returned)
         1. Open /Desktop/blog_1.txt
         Absolute Path: /Desktop/blog_1.txt

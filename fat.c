@@ -94,3 +94,4 @@ void fat_update_directory_entry(const char* filename, FATEntry *start_cluster, u
 void fat_free_cluster_chain(FATEntry *start_cluster) {
     // Update FAT entries to mark clusters as free starting from start_cluster
 }
+
