@@ -24,6 +24,13 @@
 
 FileHandle* opened_dirs[MAX_DIRS] = { NULL }; // All files that are open
 
+superblock sb;
+FATEntry *FAT;
+BitmapBlock bitmap;
+DirectoryEntry root_dir_entry;
+Directory *root_dir;
+datablock *data_section; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
+
 int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per block
 
 // helper function to compare filename
@@ -62,8 +69,11 @@ void print_subdir(DirectoryEntry* sub_dir) {
 		printf("Subdirectory Info:\n");
 		printf("Filename: %s\n", sub_dir->filename);
 		printf("Extension: %s\n", sub_dir->ext);
-		printf("First logical cluster: %d\n", sub_dir->first_logical_cluster);
-		// printf("File size: %d\n\n", sub_dir->file_size);
+		if (sub_dir->first_logical_cluster == EMPTY){
+			printf("First logical cluster: %d (empty)\n", sub_dir->first_logical_cluster);
+		} else{
+			printf("First logical cluster: %d\n", sub_dir->first_logical_cluster);
+		}
 	}
 }
 
@@ -275,8 +285,6 @@ void f_rewind(FileHandle* file) {
 }
 
 // Open a directory 
-// Currently open in root directory
-// Might fix to return a DIR struct instead of DirectoryEntry
 DirectoryEntry* f_opendir(char* directory) {
 	if (compare_filename(directory, &root_dir_entry)){
 		printf("Directory opened: %s\n", directory);
@@ -293,9 +301,9 @@ DirectoryEntry* f_opendir(char* directory) {
         token = strtok(NULL, "/");
     }
 
-    DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-	sub_dir = &root_dir_entry;
-
+    // DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
+	// sub_dir = &root_dir_entry;
+	DirectoryEntry* sub_dir = &root_dir_entry;
 	Directory* current_dir = root_dir; // traverse from root
 
     while (token != NULL) {
@@ -335,16 +343,24 @@ DirectoryEntry* f_opendir(char* directory) {
 }
 
 int f_closedir(DirectoryEntry* dir_entry) {
+	// check if given entry is null
 	if (dir_entry == NULL) {
+		printf("closedir: given NULL. \n");
         return -1;
     }
 
-    free(dir_entry);
+	// check if given entry is directory
+	if(dir_entry->type != 1){
+		printf("closedir: invalid directory entry. \n");
+        return -1;
+	}
 
+	printf("closing entry: %s\n", dir_entry->filename);
+	// no need to free, sub_entry did not use malloc
     return 0;
 }
 
-// need more testing
+// returns ALL dir entries (array) under the given try
 Directory* f_readdir(DirectoryEntry* entry) {
 	// error check
 	if (entry == NULL) {
@@ -478,78 +494,78 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 	return bytes_read;
 }
 
-int f_write(FileHandle *file, void *buffer, size_t bytes) {
-    if (file == NULL || buffer == NULL) {
-        return -1; // Invalid arguments
-    }
+// int f_write(FileHandle *file, void *buffer, size_t bytes) {
+//     if (file == NULL || buffer == NULL) {
+//         return -1; // Invalid arguments
+//     }
 
-    // Get the start cluster of the file
-    FATEntry *start_cluster = file->first_logical_cluster;
+//     // Get the start cluster of the file
+//     FATEntry *start_cluster = file->first_logical_cluster;
 
-    // Calculate the current file size
-    uint32_t current_file_size = file->file_size;
+//     // Calculate the current file size
+//     uint32_t current_file_size = file->file_size;
 
-    // Calculate the new file size after writing
-    uint32_t new_file_size = current_file_size + bytes;
+//     // Calculate the new file size after writing
+//     uint32_t new_file_size = current_file_size + bytes;
 
-    // Calculate the number of clusters needed to store the new data
-    uint32_t new_clusters_needed = (new_file_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+//     // Calculate the number of clusters needed to store the new data
+//     uint32_t new_clusters_needed = (new_file_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    // Allocate additional clusters if necessary
-    if (new_clusters_needed > file->file_size/BLOCK_SIZE) {
-        fat_allocate_cluster_chain(start_cluster, file->first_logical_cluster, new_file_size);
-    }
+//     // Allocate additional clusters if necessary
+//     if (new_clusters_needed > file->file_size/BLOCK_SIZE) {
+//         fat_allocate_cluster_chain(start_cluster, file->first_logical_cluster, new_file_size);
+//     }
 
-    // Write the data into the file clusters
-    uint8_t *data_ptr = (uint8_t *)buffer;
-    uint32_t remaining_bytes = bytes;
-    uint32_t bytes_written = 0;
+//     // Write the data into the file clusters
+//     uint8_t *data_ptr = (uint8_t *)buffer;
+//     uint32_t remaining_bytes = bytes;
+//     uint32_t bytes_written = 0;
 
-    while (remaining_bytes > 0) {
-        // Calculate the offset within the current cluster
-        uint32_t cluster_offset = current_file_size % BLOCK_SIZE;
+//     while (remaining_bytes > 0) {
+//         // Calculate the offset within the current cluster
+//         uint32_t cluster_offset = current_file_size % BLOCK_SIZE;
 
-        // Calculate the number of bytes to write in this iteration
-        uint32_t bytes_to_write = remaining_bytes;
-        if (bytes_to_write > (BLOCK_SIZE - cluster_offset)) {
-            bytes_to_write = BLOCK_SIZE - cluster_offset;
-        }
+//         // Calculate the number of bytes to write in this iteration
+//         uint32_t bytes_to_write = remaining_bytes;
+//         if (bytes_to_write > (BLOCK_SIZE - cluster_offset)) {
+//             bytes_to_write = BLOCK_SIZE - cluster_offset;
+//         }
 
-        // Write data to the file using fat_read_file_contents
-        fat_read_file_contents(start_cluster, current_file_size + bytes_written, data_ptr);
+//         // Write data to the file using fat_read_file_contents
+//         fat_read_file_contents(start_cluster, current_file_size + bytes_written, data_ptr);
 
-        // Update pointers and counters
-        data_ptr += bytes_to_write;
-        bytes_written += bytes_to_write;
-        remaining_bytes -= bytes_to_write;
-    }
+//         // Update pointers and counters
+//         data_ptr += bytes_to_write;
+//         bytes_written += bytes_to_write;
+//         remaining_bytes -= bytes_to_write;
+//     }
 
-	const char *path = file->abs_path;
-	char *extracted_filename = extract_filename(path);
+// 	const char *path = file->abs_path;
+// 	char *extracted_filename = extract_filename(path);
 
-    // Update the file size in the directory entry
-    fat_update_directory_entry(extracted_filename, start_cluster, new_file_size);
+//     // Update the file size in the directory entry
+//     fat_update_directory_entry(extracted_filename, start_cluster, new_file_size);
 
-	free(extracted_filename);
-    // Return the number of bytes written
-    return bytes_written;
-}
+// 	free(extracted_filename);
+//     // Return the number of bytes written
+//     return bytes_written;
+// }
 
-int f_remove(const char* path) {
+// int f_remove(const char* path) {
+// 	return 0;
+// }
 
-}
+// int f_stat(FileHandle *file, struct stat *buffer) {
+// 	return 0;
+// }
 
-int f_stat(FileHandle *file, struct stat *buffer) {
+// int f_mkdir(char* path) {
+// 	return 0;
+// }
 
-}
-
-int f_mkdir(char* path) {
-
-}
-
-int f_rmdir(char* path) {
-
-}
+// int f_rmdir(char* path) {
+// 	return 0;
+// }
 
 // to be called before the mainloop
 void fs_mount(char *diskname) {
@@ -677,6 +693,7 @@ void test_opendir_readdir_disk_1() {
 	DirectoryEntry* opened_essay = f_opendir("/Desktop/CS355/labs/lab1/essay");
 	if (opened_essay == NULL){
 		printf("Cannot open essay because it does not exist.\n");
+		printf("Test passed.");
 	}
 
 	printf("\n\n==== TESTING F_READDIR() ====\n"); // print statement in f_readdir()
@@ -702,6 +719,73 @@ void test_opendir_readdir_disk_1() {
 	printf("\n7. Read /Hello.txt (not a directory)\n");
 	sub_entries = f_readdir(opened_hello);
 
+	printf("\n\n==== TESTING F_CLOSEDIR() ====\n"); 
+	printf("1. Close root directory\n");
+	int ret = f_closedir(opened_root);
+	if (ret == 0){
+		printf("close success~\n");
+	} else {
+		printf("close failed!!!\n");
+		printf("Not expected :(\n");
+	}
+
+	printf("\n2. Close /Desktop directory\n");
+	ret = f_closedir(opened_desktop);
+	if (ret == 0){
+		printf("close success~\n");
+	} else {
+		printf("close failed!!!\n");
+		printf("Not expected :(\n");
+	}
+
+	printf("\n3. Close /Download directory\n"); 
+	ret = f_closedir(opened_download);
+	if (ret == 0){
+		printf("close success~\n");
+	} else {
+		printf("close failed!!!\n");
+		printf("Not expected :(\n");
+	}
+
+	printf("\n4. Close /CS355 directory\n");
+	ret = f_closedir(opened_cs355);
+	if (ret == 0){
+		printf("close success~\n");
+	} else {
+		printf("close failed!!!\n");
+		printf("Not expected :(\n");
+	}
+
+	printf("\n5. Close /labs/lab1 directory\n");
+	ret = f_closedir(opened_lab1);
+	if (ret == 0){
+		printf("close success~\n");
+	} else {
+		printf("close failed!!!\n");
+		printf("Not expected :(\n");
+	}
+
+	printf("\n6. Close /labs/lab1/essay directory (non-existent)\n");
+	ret = f_closedir(opened_essay);
+	if (ret == 0){
+		printf("close success~\n");
+		printf("Not expected :(\n");
+	} else {
+		printf("close failed!!!\n");
+		printf("Fail expected -- Null entry\n");
+	}
+
+	printf("\n7. Close /Hello.txt (not a directory)\n");
+	ret = f_closedir(opened_hello);
+	if (ret == 0){
+		printf("close success~\n");
+		printf("Not expected :(\n");
+	} else {
+		printf("close failed!!!\n");
+		printf("Fail expected -- Null entry \n");
+	}
+
+	// TODO: free DIR sub_entries as well?
 }
 
 void test_hardcoded_fread_disk_1() {
@@ -854,4 +938,5 @@ void test_disk_1() {
 int main(void) {
 	// Runs mount and tests for fake_disk_1
 	test_disk_1();
+
 }

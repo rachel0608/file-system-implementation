@@ -92,6 +92,10 @@ Known Bugs or Limitations:
     work and run by itself. Look at the section below for more information on
     the parts implemented.
 
+    Assumptions: 
+        - all given path will be absolute path. 
+        - all files can be accessed by any user. 
+
 Summary of Features and EC Completed:
 =====================================
     For an in depth summary of features and a step by step guide to testing our

@@ -26,11 +26,11 @@ typedef struct {
 } superblock;
 
 typedef struct {
-	char* abs_path; // Absolute path
-    int first_logical_cluster; // First logical cluster
-	int file_desc; // File descriptor
-	char* access; // File access type
-	int position; // File position
+	char* abs_path;             // Absolute path
+    int first_logical_cluster;  // First logical cluster
+	int file_desc;              // File descriptor
+	char* access;               // File access type
+	int position;               // File position
     uint32_t file_size;
 } FileHandle; // FileHandle loosely based on Unix systems’s FileHandle (may not need?)
 
@@ -42,7 +42,7 @@ void f_rewind(FileHandle* file);
 DirectoryEntry* f_opendir(char* path);
 Directory* f_readdir(DirectoryEntry* entry);
 int f_closedir(DirectoryEntry* dir_entry);
-void fs_mount(char *diskname); //Extra Credit
+void fs_mount(char *diskname); //Extra Credit??
 
 int f_write(FileHandle file, void* buffer, size_t bytes);
 int f_remove(const char* path);

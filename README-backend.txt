@@ -48,6 +48,7 @@ Implemented Features:
         - f_read
         - f_opendir
         - f_readdir
+        - f_closedir
         - f_seek
         - f_rewind
 
@@ -132,6 +133,37 @@ How Testing Was Done: (Used Print/Testing Statements to Terminal)
 
         7. Read /Hello.txt (not a directory)
         readdir: given NULL entry.
+
+    - f_closedir (prints out success or expected fail)
+        1. Close root directory
+        closing entry: /
+        close success~
+
+        2. Close /Desktop directory
+        closing entry: Desktop
+        close success~
+
+        3. Close /Download directory
+        closing entry: Download
+        close success~
+
+        4. Close /CS355 directory
+        closing entry: CS355
+        close success~
+
+        5. Close /labs/lab1 directory
+        closing entry: lab1
+        close success~
+
+        6. Close /labs/lab1/essay directory (non-existent)
+        closedir: given NULL. 
+        close failed!!!
+        Fail expected -- Null entry
+
+        7. Close /Hello.txt (not a directory)
+        closedir: given NULL. 
+        close failed!!!
+        Fail expected -- Null entry 
 
     - f_open (prints out the file handle returned)
         1. Open /Desktop/blog_1.txt
