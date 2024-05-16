@@ -95,3 +95,28 @@ void fat_free_cluster_chain(FATEntry *start_cluster) {
     // Update FAT entries to mark clusters as free starting from start_cluster
 }
 
+void update_bitmap(BitmapBlock *bitmap_block, int index, int value) {
+    if (bitmap_block == NULL) {
+        printf("Error: Bitmap is NULL.\n");
+        return;
+    }
+
+    if (index < 0 || index >= BLOCK_SIZE * 8) {
+        printf("Error: Invalid index. Index should be between 0 and %d.\n", BLOCK_SIZE * 8 - 1);
+        return;
+    }
+
+    if (value != 0 && value != 1) {
+        printf("Error: Invalid value. Value should be either 0 or 1.\n");
+        return;
+    }
+
+    int byte_index = index / 8;
+    int bit_index = index % 8;
+
+    if (value == 1) {
+        bitmap_block->bitmap[byte_index] |= (1 << bit_index);
+    } else {
+        bitmap_block->bitmap[byte_index] &= ~(1 << bit_index);
+    }
+}

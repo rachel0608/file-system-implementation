@@ -44,17 +44,17 @@ How to Run:
 Implemented Features:
 =====================
     Part 1. Working Commands:
-        - f_open
+        - f_open        (does not include permission check / creating new file)
         - f_read
+        - f_close       (no valgrind errors)
         - f_opendir
         - f_readdir
-        - f_closedir
+        - f_closedir    (no valgrind errors)
         - f_seek
         - f_rewind
 
-    Part 2. Partially Working/Created but Not Working Commands:
-        - f_close
-        - f_closedir
+    Part 2. Partially Working/Created but Not Fully Working Commands:
+        - f_write()
 
     Part 3. Not Implemented:
         - f_write()
@@ -224,6 +224,10 @@ How Testing Was Done: (Used Print/Testing Statements to Terminal)
         Bytes read: 7
         Buffer: Hello~!
 
+        6. Read from NULL buffer
+        Error: Buffer pointer is NULL.
+        Bytes read: -1
+
     - f_seek (prints the new file position location)
         1. Change File Position Location for /Desktop/blog_1.txt
             a. Check with SEEK_SET
@@ -245,6 +249,29 @@ How Testing Was Done: (Used Print/Testing Statements to Terminal)
         1. Rewind File Position Location for /Desktop/blog_1.txt
         Expected Updated File Position: 0
         Rewinded File Position: 0
+
+    - f_close
+        1. Close /Desktop/blog_1.txt
+        file found. freeing file...
+        close success~
+
+        2. Attempt to close /Desktop/blog_2.txt (non-existent)
+        f_close: NULL file.
+        close failed :(
+        Fail expected -- Null file
+
+        3. Attempt to close /Desktop/CS355 (folder)
+        f_close: NULL file.
+        close failed :(
+        Fail expected -- Null file
+
+        4. Close /Desktop/CS355/hw1.txt
+        file found. freeing file...
+        close success~
+
+        5. Close /Hello.txt
+        file found. freeing file...
+        close success~
 
 Limitations:
 ============

@@ -212,34 +212,29 @@ FileHandle* f_open(char* path, char* access) {
 
 int f_close(FileHandle* file) {
 	if (file == NULL) {
-		perror("ERROR: File does not exist.\n");
+		printf("f_close: NULL file.\n");
         return EOF;
 	}
-
-	int i = 0;
 	int closed = 0;
 
-	while (opened_dirs[i]) {
-		if (strcmp(opened_dirs[i]->abs_path, file->abs_path) == 0) {
-			opened_dirs[i] = NULL;
-			closed = 1;
+	// remove from array of opened dir
+	for (int i = 0; i < MAX_DIRS; i++) {
+		if (opened_dirs[i] != NULL) {
+			if (strcmp(opened_dirs[i]->abs_path, file->abs_path) == 0) {
+				opened_dirs[i] = NULL;
+				closed = 1;
+			} 
 		}
-
-		i++;
 	}
 
 	if (closed == 0) {
-		perror("ERROR: File does not exist.\n");
+		printf("f_close: File not found.\n");
         return EOF;
 	}
 
+	printf("file found. freeing file...\n");
 	free(file);
 	return 0;
-
-	// more cleanup?
-	// TODO: Remove dir_entry's FileHandle from the global open files array
-	// Concern: How do we compare DirectoryEntry and FileHandle?????
-	// FileHandle* open_dirs[MAX_DIRS];
 }
 
 int f_seek(FileHandle* file, long offset, int whence) {
@@ -405,14 +400,13 @@ Directory* f_readdir(DirectoryEntry* entry) {
 
 // helper func to read 1 block of data
 char* read_block(int cluster) {
-	if (cluster < 0 || cluster >= 65535) {
+	if (cluster < 0 || cluster >= EMPTY) {
 		printf("ERROR: Block number is out of bounds.\n");
 		return NULL;
 	}
 
-	int bytes_read = strlen(data_section[cluster].buffer);
-	char* buffer = (char*)malloc(bytes_read);
-	memcpy(buffer, data_section[cluster].buffer, bytes_read);
+	char* buffer = (char*)malloc(BLOCK_SIZE);
+	memcpy(buffer, data_section[cluster].buffer, BLOCK_SIZE);
 	
 	return buffer;
 }
@@ -470,6 +464,7 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 
 		// Copy the data into the buffer
 		memcpy(buffer + bytes_read, data, bytes_to_read);
+		free(data);
 
 		// Update the number of bytes read and remaining
 		bytes_read += bytes_to_read;
@@ -934,11 +929,60 @@ void test_open_read_disk_1() {
 
 	f_rewind(blog_1);
 	printf("Rewinded File Position: %d\n", blog_1->position);
+
+	// tests for f_close()
+	printf("\n\n==== TESTING F_CLOSE() ====\n");
+	printf("1. Close /Desktop/blog_1.txt\n");
+	int res = f_close(blog_1);
+	if (res == 0){
+		printf("close success~\n");
+	} else {
+		printf("close failed :(\n");
+		printf("not expected!!\n");
+	}
+
+	printf("\n2. Attempt to close /Desktop/blog_2.txt (non-existent)\n");
+	res = f_close(blog_2);
+	if (res == 0){
+		printf("close success~\n");
+		printf("not expected!!\n");
+	} else {
+		printf("close failed :(\n");
+		printf("Fail expected -- Null file\n");
+	}
+
+	printf("\n3. Attempt to close /Desktop/CS355 (folder)\n");
+	res = f_close(cs355);
+	if (res == 0){
+		printf("close success~\n");
+		printf("not expected!!\n");
+	} else {
+		printf("close failed :(\n");
+		printf("Fail expected -- Null file\n");
+	}
+
+	printf("\n4. Close /Desktop/CS355/hw1.txt\n");
+	res = f_close(hw1);
+	if (res == 0){
+		printf("close success~\n");
+	} else {
+		printf("close failed :(\n");
+		printf("not expected!!\n");
+	}
+
+	printf("\n5. Close /Hello.txt\n");
+	res = f_close(hello);
+	if (res == 0){
+		printf("close success~\n");
+	} else {
+		printf("close failed :(\n");
+		printf("not expected!!\n");
+	}
 }
 
 void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
-	// test_opendir_readdir_disk_1();
+	test_opendir_readdir_disk_1();
 	// test_hardcoded_fread_disk_1();
 	test_open_read_disk_1();
 
