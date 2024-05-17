@@ -57,7 +57,8 @@ void f_rewind(FileHandle* file);
 DirectoryEntry* f_opendir(char* path);
 Directory* f_readdir(DirectoryEntry* entry);
 int f_closedir(DirectoryEntry* dir_entry);
-void fs_mount(char *diskname); //Extra Credit??
+void fs_mount(char *diskname);
+void fs_unmount(char *diskname);
 
 int f_write(FileHandle *file, void* buffer, size_t bytes);
 int f_remove(const char* path);
