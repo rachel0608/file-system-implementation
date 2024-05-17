@@ -25,12 +25,12 @@
 FileHandle* opened_dirs[MAX_DIRS] = { NULL }; // All files that are open
 
 // define the extern variables declared in fat.h
-superblock sb;
+/* superblock sb;
 FATEntry *FAT = NULL;
 BitmapBlock bitmap;
 DirectoryEntry root_dir_entry;
 Directory *root_dir = NULL;
-datablock *data_section = NULL; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
+datablock *data_section = NULL;  */// 1MB = 2048 blocks * 512 bytes = 1048576 bytes
 
 int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per block
 
