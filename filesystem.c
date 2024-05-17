@@ -715,7 +715,8 @@ void fs_unmount(char *diskname) {
 		}
     }
     printf("\n");
-
+	free(FAT);
+	free(data_section);
 	fclose(disk);
 	printf("Unmounting done\n \n");
 }
@@ -1060,9 +1061,7 @@ void test_disk_1() {
 	// test_hardcoded_fread_disk_1();
 	test_open_read_disk_1();
 
-	// free from fs_mount
-	free(FAT);
-	free(data_section);
+	fs_unmount("./disks/fake_disk_1.img");
 }
 
 int main(void) {
