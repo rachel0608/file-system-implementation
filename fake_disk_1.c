@@ -35,7 +35,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "fat.h"
 #include "filesystem.h"
 
 #define BLOCK_SIZE 512

@@ -12,25 +12,16 @@
 #include <stdbool.h>
 #include <string.h>
 #include "filesystem.h"
-#include "fat.h"
-
-// moved to filesystem.h
-// #define SEEK_SET 0
-// #define SEEK_CUR 1
-// #define SEEK_END 2
-// #define MAX_DIRS 100
-// #define EMPTY 65535 // first_logical_cluster value for empty directory
-// #define END_OF_FILE 0 // FAT entry value for end of file
 
 FileHandle* opened_dirs[MAX_DIRS] = { NULL }; // All files that are open
 
-// define the extern variables declared in fat.h
-/* superblock sb;
+// global var
+superblock sb;
 FATEntry *FAT = NULL;
 BitmapBlock bitmap;
 DirectoryEntry root_dir_entry;
 Directory *root_dir = NULL;
-datablock *data_section = NULL;  */// 1MB = 2048 blocks * 512 bytes = 1048576 bytes
+datablock *data_section = NULL; // 1MB = 2048 blocks * 512 bytes = 1048576 bytes
 
 int num_dir_per_block = BLOCK_SIZE / sizeof(DirectoryEntry); // 26 entries per block
 
@@ -174,6 +165,7 @@ FileHandle* f_open(char* path, char* access) {
 
 	if (target_file == NULL) {
 		printf("ERROR: File does not exist.\n");
+		printf("NOTE: Current version of f_open() cannot handle new file creation.\n");
 		return NULL;
 	}
 
@@ -201,7 +193,6 @@ FileHandle* f_open(char* path, char* access) {
 	// Checking if there's space in the array
 	if (index != -1) {
 		opened_dirs[index] = file;
-		// printf("FileHandle added successfully at index %d\n", index);
 		return file;
 	}
 
@@ -278,8 +269,6 @@ void f_rewind(FileHandle* file) {
         printf("ERROR: Failed to f_rewind() file pointer.\n");
         return;
     }
-
-    // printf("File pointer rewound to the start of the file.\n"); // Success message~!
 }
 
 // Open a directory 
@@ -299,8 +288,6 @@ DirectoryEntry* f_opendir(char* directory) {
         token = strtok(NULL, "/");
     }
 
-    // DirectoryEntry* sub_dir = (DirectoryEntry*)malloc(sizeof(DirectoryEntry));
-	// sub_dir = &root_dir_entry;
 	DirectoryEntry* sub_dir = &root_dir_entry;
 	Directory* current_dir = root_dir; // traverse from root
 
@@ -491,71 +478,223 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 	return bytes_read;
 }
 
-/* int f_write(FileHandle *file, void *buffer, size_t bytes) {
-    if (file == NULL || buffer == NULL) {
-        return -1; // Invalid arguments
-    }
+// read file contents from start cluster
+void fat_read_file_contents(FATEntry *start_cluster, uint32_t file_size, uint8_t *buffer) {
+    // Initialize variables for tracking the current cluster and buffer offset
+    FATEntry current_cluster = *start_cluster;
+    uint32_t bytes_read = 0;
 
-    // Get the start cluster of the file
-    FATEntry *start_cluster;
-	start_cluster->block_number = file->first_logical_cluster;
+    // Read file data from clusters until the entire file is read
+    while (bytes_read < file_size) {
+        // Calculate the block number corresponding to the current cluster
+        uint16_t block_number = current_cluster.block_number;
 
-    // Calculate the current file size
-    uint32_t current_file_size = file->file_size;
+        // Determine how many bytes to read from the current block
+        uint32_t bytes_to_read = (file_size - bytes_read < BLOCK_SIZE) ? (file_size - bytes_read) : BLOCK_SIZE;
 
-    // Calculate the new file size after writing
-    uint32_t new_file_size = current_file_size + bytes;
-
-    // Calculate the number of clusters needed to store the new data
-    uint32_t new_clusters_needed = (new_file_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
-
-    // Allocate additional clusters if necessary
-    if (new_clusters_needed > file->file_size/BLOCK_SIZE) {
-        fat_allocate_cluster_chain(start_cluster, file->first_logical_cluster, new_file_size);
-    }
-
-    // Write the data into the file clusters
-    uint8_t *data_ptr = (uint8_t *)buffer;
-    uint32_t remaining_bytes = bytes;
-    uint32_t bytes_written = 0;
-
-    while (remaining_bytes > 0) {
-        // Calculate the offset within the current cluster
-        uint32_t cluster_offset = current_file_size % BLOCK_SIZE;
-
-        // Calculate the number of bytes to write in this iteration
-        uint32_t bytes_to_write = remaining_bytes;
-        if (bytes_to_write > (BLOCK_SIZE - cluster_offset)) {
-            bytes_to_write = BLOCK_SIZE - cluster_offset;
+        // Read data from the block using f_read and copy it into the buffer
+        int result = f_read(&data_section[block_number], buffer + bytes_read, bytes_to_read);
+        if (result < 0) {
+            // Handle error
+            // For simplicity, we're just printing an error message here
+            printf("Error reading file data\n");
+            return;
         }
 
-        // Write data to the file using fat_read_file_contents
-        fat_read_file_contents(start_cluster, current_file_size + bytes_written, data_ptr);
+        // Update bytes read and move to the next cluster
+        bytes_read += bytes_to_read;
+        current_cluster = FAT[block_number];
+    }
+}
 
-        // Update pointers and counters
-        data_ptr += bytes_to_write;
-        bytes_written += bytes_to_write;
-        remaining_bytes -= bytes_to_write;
+// allocate a chain of clusters for a new file
+void fat_allocate_cluster_chain(FATEntry* start_cluster, uint16_t start_cluster_idx, uint32_t file_size) {
+    // Initialize variables
+    FATEntry prev_cluster = *start_cluster;
+    uint32_t bytes_allocated = BLOCK_SIZE;
+
+    // Iterate through the FAT to find free clusters and allocate them
+    for (uint16_t i = start_cluster_idx+1; i < sb.file_size_blocks; i++) {
+        // Check if the current cluster is free
+        if (FAT[i].block_number == FREEBLOCK) {
+            //set previous cluster block number to curr cluster index
+            prev_cluster.block_number = i;
+
+            // Update the current cluster to link it to the next one
+            prev_cluster = FAT[i];
+
+            // Update the number of bytes allocated
+            bytes_allocated += BLOCK_SIZE;
+
+            // Check if we've allocated enough clusters for the file
+            if (bytes_allocated >= file_size) {
+                FAT[i].block_number = END_OF_FILE;
+                return; // Allocation complete
+            }
+        }
+    }
+}
+// update directory entry for a file
+void fat_update_directory_entry(const char* filename, FATEntry *start_cluster, uint32_t file_size) {
+    // Find the directory entry corresponding to the filename
+    // Update the entry with the new start cluster and file size
+}
+
+// int f_write(FileHandle *file, void *buffer, size_t bytes) {
+//     if (file == NULL || buffer == NULL) {
+//         return -1; // Invalid arguments
+//     }
+
+//     // Get the start cluster of the file
+//     FATEntry *start_cluster;
+// 	start_cluster->block_number = file->first_logical_cluster;
+
+//     // Calculate the current file size
+//     uint32_t current_file_size = file->file_size;
+
+//     // Calculate the new file size after writing
+//     uint32_t new_file_size = current_file_size + bytes;
+
+//     // Calculate the number of clusters needed to store the new data
+//     uint32_t new_clusters_needed = (new_file_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+//     // Allocate additional clusters if necessary
+//     if (new_clusters_needed > file->file_size/BLOCK_SIZE) {
+//         fat_allocate_cluster_chain(start_cluster, file->first_logical_cluster, new_file_size);
+//     }
+
+//     // Write the data into the file clusters
+//     uint8_t *data_ptr = (uint8_t *)buffer;
+//     uint32_t remaining_bytes = bytes;
+//     uint32_t bytes_written = 0;
+
+//     while (remaining_bytes > 0) {
+//         // Calculate the offset within the current cluster
+//         uint32_t cluster_offset = current_file_size % BLOCK_SIZE;
+
+//         // Calculate the number of bytes to write in this iteration
+//         uint32_t bytes_to_write = remaining_bytes;
+//         if (bytes_to_write > (BLOCK_SIZE - cluster_offset)) {
+//             bytes_to_write = BLOCK_SIZE - cluster_offset;
+//         }
+
+//         // Write data to the file using fat_read_file_contents
+//         fat_read_file_contents(start_cluster, current_file_size + bytes_written, data_ptr);
+
+//         // Update pointers and counters
+//         data_ptr += bytes_to_write;
+//         bytes_written += bytes_to_write;
+//         remaining_bytes -= bytes_to_write;
+//     }
+
+// 	const char *path = file->abs_path;
+// 	char *extracted_filename = extract_filename(path);
+
+//     // Update the file size in the directory entry
+//     fat_update_directory_entry(extracted_filename, start_cluster, new_file_size);
+
+// 	free(extracted_filename);
+//     // Return the number of bytes written
+//     return bytes_written;
+// } 
+
+void update_bitmap(BitmapBlock *bitmap_block, int index, int value) {
+    if (bitmap_block == NULL) {
+        printf("Error: Bitmap is NULL.\n");
+        return;
     }
 
-	const char *path = file->abs_path;
-	char *extracted_filename = extract_filename(path);
+    if (index < 0 || index >= BLOCK_SIZE * 8) {
+        printf("Error: Invalid index. Index should be between 0 and %d.\n", BLOCK_SIZE * 8 - 1);
+        return;
+    }
 
-    // Update the file size in the directory entry
-    fat_update_directory_entry(extracted_filename, start_cluster, new_file_size);
+    if (value != 0 && value != 1) {
+        printf("Error: Invalid value. Value should be either 0 or 1.\n");
+        return;
+    }
 
-	free(extracted_filename);
-    // Return the number of bytes written
-    return bytes_written;
-} */
+    int byte_index = index / 8;
+    int bit_index = index % 8;
 
-// int f_remove(const char* path) {
-// 	return 0;
-// }
+    if (value == 1) {
+        bitmap_block->bitmap[byte_index] |= (1 << bit_index);
+    } else {
+        bitmap_block->bitmap[byte_index] &= ~(1 << bit_index);
+    }
+}
+
+// Find the directory entry for a file
+DirectoryEntry* find_file(char* filename){
+	DirectoryEntry *entry = &root_dir_entry;
+
+	char temp[strlen(filename) + 1];
+    strcpy(temp, filename);
+    
+    char *token = strtok(temp, "/");
+    
+    // first token is "/", skip
+    if (strcmp(token, "") == 0) {
+        token = strtok(NULL, "/");
+    }
+
+	Directory* current_dir = root_dir; // traverse from root
+
+    while (token != NULL) {
+        printf("Looking up file: %s...\n", token);
+		current_dir = f_readdir(entry);
+
+		if (current_dir == NULL){
+			return NULL;
+		}
+
+		for (int i = 0; i < num_dir_per_block; i++) {
+			entry = &current_dir->entries[i];
+			
+			// check if the filename matches
+			if (compare_filename(token, entry)) {
+				if (entry->type == 0){ // check if file
+					// printf("Found: %s\n", token);
+					return entry;
+				}
+			}
+		}
+        token = strtok(NULL, "/");
+    }
+
+	return NULL;
+}
+
+int f_remove(char* path) {
+    // find the directory entry of given file
+    DirectoryEntry* entry = find_file(path);
+    if (entry == NULL) {
+        printf("f_remove: File %s not found\n", path);
+        return -1;
+    }
+
+	int current_cluster = entry->first_logical_cluster;
+
+    // empty dir entry
+	printf("Marking the directory entry as unused\n");
+    memset(entry->filename, 0, sizeof(entry->filename));
+    entry->first_logical_cluster = EMPTY;
+    entry->file_size = 0;
+
+    // traverse FAT to mark data clusters as unused
+    while (current_cluster != 0 && current_cluster != EMPTY) {
+        uint16_t next_cluster = FAT[current_cluster].block_number;
+        FAT[current_cluster].block_number = END_OF_FILE;
+        update_bitmap(&bitmap, current_cluster, 1); // mark bitmap as 1 (free)
+        current_cluster = next_cluster;
+    }
+
+	return 0;
+}
 
 // int f_stat(FileHandle *file, struct stat *buffer) {
 // 	return 0;
-// }
+// } not implemented~
 
 // int f_mkdir(char* path) {
 // 	return 0;
@@ -721,13 +860,42 @@ void fs_unmount(char *diskname) {
 	printf("Unmounting done\n \n");
 }
 
-void is_success(int val) {
-	if (val == 0) {
-		printf("Successfully closed file~!\n");
-		return;
+void test_remove_disk_1(){
+	printf("1. Remove /Hello.txt\n");
+	int res = f_remove("/Hello.txt");
+	if (res == 0){
+		printf("Remove success. Expected~\n");
+		printf("Checking with f_open(). Expected to print ERROR: File does not exist\n");
+		f_open("/Hello.txt", "r");
+	} else {
+		printf("Remove failed. Not expected!!! \n");
 	}
 
-	printf("Failure, cannot close file~~\n");
+	printf("\n2. Remove /Desktop (directory, should fail)\n");
+	res = f_remove("/Desktop");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed. Expected~\n");
+	}
+
+	printf("\n3. Remove /fake_file.txt (non-existent)\n");
+	res = f_remove("/fake_file.txt");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed. Expected~\n");
+	}
+
+	printf("\n4. Remove /Desktop/blog_1.txt\n");
+	res = f_remove("/Desktop/blog_1.txt");
+	if (res == 0){
+		printf("Remove success. Expected~\n");
+		printf("Checking with f_open(). Expected to print ERROR: File does not exist\n");
+		f_open("/Desktop/blog_1.txt", "r");
+	} else {
+		printf("Remove failed. Not expected!!! \n");
+	}
 }
 
 void test_opendir_readdir_disk_1() {
@@ -864,31 +1032,6 @@ void test_opendir_readdir_disk_1() {
 		printf("close failed!!!\n");
 		printf("Fail expected -- Null entry \n");
 	}
-}
-
-void test_hardcoded_fread_disk_1() {
-	printf("\n\n==== TESTING F_READ() ====\n");
-
-	printf("Read /Desktop/blog_1.txt\n");
-	printf("1. Open /Desktop/Blog1.txt\n");
-	printf("GRACEEE~~\n");
-
-	// FEED IN THE FILE HANDLE FROM F_OPEN
-	printf("\n2. Read 56 bytes (file size)\n");
-	char buffer[512];
-	int bytes = f_read(NULL, buffer, 56);
-	printf("Bytes read: %d\n", bytes);
-	printf("Buffer: %s\n", buffer);
-
-	printf("\n3. Read 6 bytes only\n");
-	bytes = f_read(NULL, buffer, 6);
-	printf("Bytes read: %d\n", bytes);
-	printf("Buffer: %s\n", buffer);
-
-	printf("\n4. Attempt to read 100 bytes (file size exceeded)\n");
-	bytes = f_read(NULL, buffer, 100);
-	printf("Bytes read: %d\n", bytes);
-	printf("Buffer: %s\n", buffer);
 }
 
 void test_open_read_disk_1() {
@@ -1057,10 +1200,11 @@ void test_open_read_disk_1() {
 
 void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
-	test_opendir_readdir_disk_1();
-	// test_hardcoded_fread_disk_1();
-	test_open_read_disk_1();
+	// test_opendir_readdir_disk_1();
+	// test_open_read_disk_1();
+	test_remove_disk_1();
 
+	// unmount
 	fs_unmount("./disks/fake_disk_1.img");
 }
 

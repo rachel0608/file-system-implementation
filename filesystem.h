@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "fat.h"
 
 // Seek offset constants
 #define SEEK_SET 0
@@ -22,6 +21,34 @@
 #define MAX_DIRS 100
 #define EMPTY 65535 // first_logical_cluster value for empty directory
 #define END_OF_FILE 0 // FAT entry value for end of file
+#define BLOCK_SIZE 512
+#define FREEBLOCK 65535
+
+
+// Root directory is also a directory entry
+typedef struct {
+    char filename[8];
+    char ext[3];
+    uint16_t first_logical_cluster;
+    uint16_t type; // 0 for file, 1 for directory
+    uint32_t file_size;
+} DirectoryEntry; 
+
+typedef struct {
+    DirectoryEntry entries[BLOCK_SIZE / sizeof(DirectoryEntry)];
+} Directory; //holds 26 DirectoryEntrys if 1MB disk
+
+typedef struct {
+    uint16_t block_number;
+} FATEntry;
+
+typedef struct {
+    uint8_t bitmap[BLOCK_SIZE];
+} BitmapBlock;
+
+typedef struct {
+    char buffer[BLOCK_SIZE];
+} datablock; // holds a block of data
 
 typedef struct {
     uint8_t file_size_mb;       // file size in MB (default is 1MB)
@@ -42,13 +69,6 @@ typedef struct {
     uint32_t file_size;
 } FileHandle; // FileHandle loosely based on Unix systems’s FileHandle (may not need?)
 
-extern superblock sb;
-extern FATEntry *FAT = NULL;
-extern BitmapBlock bitmap;
-extern DirectoryEntry root_dir_entry;
-extern Directory *root_dir = NULL;
-extern datablock *data_section = NULL;
-
 FileHandle* f_open(char* path, char* access); // access = w/w+, r/r+, a/a+ maybe add group later as param
 int f_read(FileHandle *file, void* buffer, int bytes);
 int f_close(FileHandle* file);
@@ -61,9 +81,17 @@ void fs_mount(char *diskname);
 void fs_unmount(char *diskname);
 
 int f_write(FileHandle *file, void* buffer, size_t bytes);
-int f_remove(const char* path);
+int f_remove(char* path);
 //int f_stat(FileHandle file, struct stat *buffer);
 int f_mkdir(char* path);
 int f_rmdir(char* path);
+
+// read file contents from clusters
+void fat_read_file_contents(FATEntry *start_cluster, uint32_t file_size, uint8_t *buffer);
+
+// allocate a chain of clusters for a new file
+void fat_allocate_cluster_chain(FATEntry* start_cluster, uint16_t start_cluster_idx, uint32_t file_size);
+
+void fat_update_directory_entry(const char* filename, FATEntry *start_cluster, uint32_t file_size);
 
 #endif
