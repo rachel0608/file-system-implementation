@@ -697,13 +697,141 @@ int f_remove(char* path) {
 // 	return 0;
 // } not implemented~
 
-// int f_mkdir(char* path) {
-// 	return 0;
-// }
+int f_rmdir(char* path) {
+	// open dir to be removed
+	DirectoryEntry* target = f_opendir(path);
+	if (target == NULL) {
+		printf("f_rmdir: Directory %s not found\n", path);
+		return -1;
+	}
 
-// int f_rmdir(char* path) {
-// 	return 0;
-// }
+	// check if the directory is empty
+	if (target->first_logical_cluster != EMPTY) {
+		printf("f_rmdir: Directory %s is not empty\n", path);
+		return -1;
+	}
+
+	// remove the directory
+	memset(target, 0, sizeof(DirectoryEntry));
+	printf("f_rmdir: Directory %s removed\n", path);
+
+	// find the parent dir and calculate the number of children dirs
+	printf("f_rmdir: Finding parent directory of %s...\n", path);
+	char parent_path[2048];
+	strncpy(parent_path, path, sizeof(parent_path) - 1);
+	reformat_path(parent_path);
+
+	DirectoryEntry* parent_entry = f_opendir(parent_path);
+	if (parent_entry == NULL) {
+		printf("ERROR: Directory does not exist.\n");
+		return NULL;
+	}
+
+	Directory* all_dirs = f_readdir(parent_entry);
+	if (all_dirs == NULL) {
+		// if no child left, mark parent dir as empty
+		printf("f_rmdir: Parent directory %s is now empty\n", parent_path);
+		parent_entry->first_logical_cluster = EMPTY;
+		update_bitmap(&bitmap, parent_entry->first_logical_cluster, 1);
+		print_subdir(parent_entry);
+	} else {
+		// else print remaining subdirs
+		printf("f_rmdir: Parent directory's remaining subdirs\n");
+		print_dir(all_dirs);
+	}
+
+	return 0;
+
+}
+
+int f_mkdir(char* path) {
+	// find the parent directory
+	char parent_path[2048];
+	strncpy(parent_path, path, sizeof(parent_path) - 1);
+	reformat_path(parent_path);
+
+	DirectoryEntry* parent_entry = f_opendir(parent_path);
+	if (parent_entry == NULL) {
+		printf("ERROR: Directory does not exist.\n");
+		return -1;
+	}
+
+	// find the parent directory
+	char* new_dirname = find_relative_path(path);
+	if (new_dirname == NULL) {
+		printf("ERROR: Invalid directory name.\n");
+		return -1;
+	}
+
+	// check if the directory already exists
+	Directory* all_dirs = f_readdir(parent_entry);
+	if (all_dirs != NULL) {
+		for (int i = 0; i < num_dir_per_block; i++) {
+			if (compare_filename(new_dirname, &all_dirs->entries[i])) {
+				printf("ERROR: Directory already exists.\n");
+				return -1;
+			}
+		}
+	}
+
+	// if parent dir is empty, find an empty cluster in bitmap and update parent dir
+	// else add a new DirectoryEntry to parent dir's first logical cluster
+	DirectoryEntry* new_entry = NULL;
+	if (parent_entry->first_logical_cluster == EMPTY) {
+		printf("Parent directory is empty.\n");
+		// find an empty cluster in bitmap
+		int empty_cluster = -1;
+		for (int i = 0; i < (int) sb.file_size_blocks; i++) {
+			if (bitmap.bitmap[i] == 1) {
+				empty_cluster = i;
+				printf("Found empty cluster at index %d\n", empty_cluster);
+				break;
+			}
+		}
+
+		if (empty_cluster == -1) {
+			printf("ERROR: No empty clusters available.\n");
+			return -1;
+		}
+
+		new_entry = (DirectoryEntry*) &data_section[empty_cluster].buffer;
+		parent_entry->first_logical_cluster = empty_cluster;
+		update_bitmap(&bitmap, empty_cluster, 0);
+	} else {
+		// find space in the cluster to write a new DirectoryEntry
+		for (int i = 0; i < num_dir_per_block; i++) {
+			if (strcmp(all_dirs->entries[i].filename, "") == 0) {
+				new_entry = &all_dirs->entries[i];
+				printf("Found empty directory entry at index %d\n", i);
+				break;
+			}
+		}
+
+		if (new_entry == NULL) {
+			printf("ERROR: No empty directory entries available.\n");
+			return -1;
+		}
+	}
+
+	// create the new directory
+	memcpy(new_entry->filename, new_dirname, 8);
+	new_entry->type = 1;
+	new_entry->first_logical_cluster = EMPTY;
+	new_entry->file_size = 0;
+
+	printf("Directory %s created in %s\n", new_dirname, parent_path);
+	print_subdir(new_entry);
+	printf("Parent directory's info\n");
+	all_dirs = f_readdir(parent_entry);
+	if (all_dirs != NULL) {
+		print_dir(all_dirs);
+	} else {
+		printf("ERROR: Parent directory is empty\n");
+	}
+
+	return 0;
+
+}
 
 // to be called before the mainloop or testing
 void fs_mount(char *diskname) {
@@ -897,6 +1025,84 @@ void test_remove_disk_1(){
 	} else {
 		printf("Remove failed. Not expected!!! \n");
 	}
+}
+
+void test_removedir_disk_1() {
+	printf("1. Remove /Essay (non-existent)\n");
+	int res = f_rmdir("/Essay");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed as expected.\n");
+	}
+
+	printf("\n2. Remove /Desktop/CS355/labs/lab1 (labs/ should be empty afterwards)\n");
+	res = f_rmdir("/Desktop/CS355/labs/lab1");
+	if (res == 0){
+		printf("Successfully removed /Desktop/CS355/labs/lab1\n");
+	} else {
+		printf("Remove failed.\n");
+	}
+
+	printf("\n3. Remove /Desktop/CS355 (not empty)\n");
+	res = f_rmdir("/Desktop/CS355");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed as expected.\n");
+	}
+
+	printf("\n4. Remove /Desktop/CS355/blog_1.txt (file)\n");
+	res = f_rmdir("/Desktop/CS355/blog_1.txt");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed as expected.\n");
+	}
+
+	printf("\n5. Remove root directory\n");
+	res = f_rmdir("/");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed as expected.\n");
+	}
+
+	printf("\n6. Remove /Download (directory)\n");
+	res = f_rmdir("/Download");
+	if (res == 0){
+		printf("Successfully removed /Download\n");
+	} else {
+		printf("Remove failed.\n");
+	}
+
+}
+
+void test_mkdir_disk_1() {
+	printf("1. Make directory /Desktop/CS355/labs/lab2 (labs/ is not empty)\n");
+	int res = f_mkdir("/Desktop/CS355/labs/lab2");
+	if (res == 0){
+		printf("Successfully created /Desktop/CS355/labs/lab2\n");
+	} else {
+		printf("Make directory failed.\n");
+	}
+
+	printf("\n2. Make directory /Desktop/CS355 (already exists)\n");
+	res = f_mkdir("/Desktop/CS355");
+	if (res == 0){
+		printf("Make directory success. Not expected!!!\n");
+	} else {
+		printf("Make directory failed as expected.\n");
+	}
+
+	printf("\n3. Make directory /Download/Images (Download/ is empty)\n");
+	res = f_mkdir("/Download/Images");
+	if (res == 0){
+		printf("Successfully created /Download/Images\n");
+	} else {
+		printf("Make directory failed.\n");
+	}
+
 }
 
 void test_opendir_readdir_disk_1() {
@@ -1203,7 +1409,9 @@ void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
 	// test_opendir_readdir_disk_1();
 	// test_open_read_disk_1();
-	test_remove_disk_1();
+	// test_remove_disk_1();
+	test_removedir_disk_1();
+	// test_mkdir_disk_1();
 
 	// unmount
 	fs_unmount("./disks/fake_disk_1.img");
