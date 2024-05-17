@@ -94,7 +94,7 @@ Known Bugs or Limitations:
 
     Assumptions: 
         - all given path will be absolute path. 
-        - all files can be accessed by any user. 
+        - all files can be accessed by any user. (everyone is superuser.) 
 
 Summary of Features and EC Completed:
 =====================================

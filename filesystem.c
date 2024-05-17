@@ -36,7 +36,6 @@ bool compare_filename(const char* filename, DirectoryEntry* dir_entry) {
     strncpy(full_filename, dir_entry->filename, 8);
 	strcat(full_filename, ".");
     strncat(full_filename, dir_entry->ext, 3);
-	// printf("full_filename: %s\n", full_filename);
 
     // Compare the full filename
     return strcmp(filename, full_filename) == 0;
@@ -58,7 +57,7 @@ bool compare_cluster(const char* filename, const DirectoryEntry* dir_entry) {
 // print a subdirectory
 void print_subdir(DirectoryEntry* sub_dir) {
 	if (strcmp(sub_dir->filename, "") != 0) {
-		printf("Subdirectory Info:\n");
+		printf("=== Directory Entry Info === \n");
 		printf("Filename: %s\n", sub_dir->filename);
 		printf("Extension: %s\n", sub_dir->ext);
 		if (sub_dir->first_logical_cluster == EMPTY){
@@ -74,6 +73,7 @@ void print_dir(Directory* entry) {
 	for(int i = 0; i < num_dir_per_block; i++){
 		print_subdir(&entry->entries[i]);
 	}
+	printf("===========\n");
 }
 
 // print a subdirectory
@@ -614,53 +614,54 @@ void update_bitmap(BitmapBlock *bitmap_block, int index, int value) {
         return;
     }
 
-    int byte_index = index / 8;
-    int bit_index = index % 8;
-
-    if (value == 1) {
-        bitmap_block->bitmap[byte_index] |= (1 << bit_index);
+    if (value == 0) {
+        // set block as free
+        bitmap_block->bitmap[index / 8] &= ~(1 << (index % 8));
     } else {
-        bitmap_block->bitmap[byte_index] &= ~(1 << bit_index);
+        // set block as used
+        bitmap_block->bitmap[index / 8] |= 1 << (index % 8);
     }
 }
 
 // Find the directory entry for a file
-DirectoryEntry* find_file(char* filename){
-	DirectoryEntry *entry = &root_dir_entry;
+DirectoryEntry* find_file(char* full_path){
+	char directory[256];
+    char filename[256];
 
-	char temp[strlen(filename) + 1];
-    strcpy(temp, filename);
-    
-    char *token = strtok(temp, "/");
-    
-    // first token is "/", skip
-    if (strcmp(token, "") == 0) {
-        token = strtok(NULL, "/");
+	const char* last_slash = strrchr(full_path, '/');
+
+    if (last_slash == NULL) {
+        printf("ERROR: please enter absolute path. \n");
+    } else if (last_slash == full_path) {
+        // split path starts with a slash followed by the filename
+        strcpy(directory, "/");
+        strcpy(filename, last_slash + 1);
+    } else {
+        // Split the path into directory and filename
+        size_t directory_length = last_slash - full_path;
+        strncpy(directory, full_path, directory_length);
+        directory[directory_length] = '\0';
+        strcpy(filename, last_slash + 1);
     }
+	printf("dir: %s   file: %s\n", directory, filename); // check splitting
+    
+	DirectoryEntry *entry = f_opendir(directory);
+	Directory* dir = (Directory *) data_section[entry->first_logical_cluster].buffer;
 
-	Directory* current_dir = root_dir; // traverse from root
+	printf("Start finding file...\n");
 
-    while (token != NULL) {
-        printf("Looking up file: %s...\n", token);
-		current_dir = f_readdir(entry);
-
-		if (current_dir == NULL){
-			return NULL;
-		}
-
-		for (int i = 0; i < num_dir_per_block; i++) {
-			entry = &current_dir->entries[i];
-			
+	for (int i = 0; i < num_dir_per_block; i++) {
+		entry = &dir->entries[i];
+		if (strcmp(entry->filename, "") != 0){
 			// check if the filename matches
-			if (compare_filename(token, entry)) {
+			if (compare_filename(filename, entry)) {
 				if (entry->type == 0){ // check if file
 					// printf("Found: %s\n", token);
 					return entry;
 				}
-			}
+			} 
 		}
-        token = strtok(NULL, "/");
-    }
+	}
 
 	return NULL;
 }
@@ -676,7 +677,7 @@ int f_remove(char* path) {
 	int current_cluster = entry->first_logical_cluster;
 
     // empty dir entry
-	printf("Marking the directory entry as unused\n");
+	printf("Marking the directory entry as unused...\n");
     memset(entry->filename, 0, sizeof(entry->filename));
     entry->first_logical_cluster = EMPTY;
     entry->file_size = 0;
@@ -707,7 +708,7 @@ int f_remove(char* path) {
 // to be called before the mainloop or testing
 void fs_mount(char *diskname) {
 	printf("==== MOUNTING... ====\n");
-	// extern superblock, FAT, bitmap, rootdir, data_section globals declared in header, defined in this func
+	// superblock, FAT, bitmap, rootdir, data_section globals declared in header, defined in this func
 	FILE *disk = fopen(diskname, "rb");
 	if (disk == NULL) {
 	    fprintf(stderr, "Error: Failed to open disk file '%s'\n", diskname);

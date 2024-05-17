@@ -18,8 +18,6 @@ Program Files:
         filesystem.c
         fake_disk_1.c
         fake_disk_2.c
-        fat.h
-        fat.c
 
 How to Compile:
 ===============
@@ -52,21 +50,25 @@ Implemented Features:
         - f_closedir    (no valgrind errors)
         - f_seek
         - f_rewind
+        - f_remove()
 
     Part 2. Partially Working/Created but Not Fully Working Commands:
         - f_write()
 
     Part 3. Not Implemented:
         - f_stat()
-        - f_remove()
         - f_mkdir()
         - f_rmdir()
 
 How Testing Was Done: (Used Print/Testing Statements to Terminal)
 =================================================================
+IMPORTANT NOTES
 * Our testing print statements contains print statments for all the traversals
   to show our filesystem functions work and are NOT hardcoded.
-  To shorten this README, these prints are truncated.
+* To shorten this README, these prints are truncated.
+* Please run ./fake_disk_1 everytime before running tests to ensure consistency, 
+  as some tests modifies contents in fake disks. 
+
 
 * Running the ./filesystem will show the tests in its entirety.
     === tests included in test_opendir_readdir_disk_1() ===
@@ -269,6 +271,44 @@ How Testing Was Done: (Used Print/Testing Statements to Terminal)
         5. Close /Hello.txt
         file found. freeing file...
         close success~
+
+    === tests included in test_remove_disk_1() ===
+    - f_remove()
+        1. Remove /Hello.txt
+        dir: /   file: Hello.txt
+        ...
+        Start finding file...
+        Marking the directory entry as unused...
+        Remove success. Expected~
+        Checking with f_open(). Expected to print ERROR: File does not exist
+        ...
+        ERROR: File does not exist.
+        NOTE: Current version of f_open() cannot handle new file creation.
+
+        2. Remove /Desktop (directory, should fail)
+        dir: /   file: Desktop
+        Directory opened: /
+        Start finding file...
+        f_remove: File /Desktop not found
+        Remove failed. Expected~
+
+        3. Remove /fake_file.txt (non-existent)
+        dir: /   file: fake_file.txt
+        Directory opened: /
+        Start finding file...
+        f_remove: File /fake_file.txt not found
+        Remove failed. Expected~
+
+        4. Remove /Desktop/blog_1.txt
+        dir: /Desktop   file: blog_1.txt
+        ...
+        Start finding file...
+        Marking the directory entry as unused...
+        Remove success. Expected~
+        Checking with f_open(). Expected to print ERROR: File does not exist
+        ...
+        ERROR: File does not exist.
+        NOTE: Current version of f_open() cannot handle new file creation. 
 
 Limitations:
 ============
