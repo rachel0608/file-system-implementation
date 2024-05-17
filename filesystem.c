@@ -647,6 +647,79 @@ void fs_mount(char *diskname) {
 	printf("Mounting done\n \n");
 }
 
+void fs_unmount(char *diskname) {
+	printf("==== UNMOUNTING... ====\n");
+	// extern superblock, FAT, bitmap, rootdir, data_section globals declared in header, defined in this func
+	FILE *disk = fopen(diskname, "wb");
+	if (disk == NULL) {
+	    fprintf(stderr, "Error: Failed to open disk file '%s'\n", diskname);
+	    exit(EXIT_FAILURE);
+	}
+	
+	//read + define superblock
+	fseek(disk, 0, SEEK_SET);
+	fwrite(&sb, sizeof(superblock), 1, disk);
+	printf("Superblock Info:\n");
+	printf("File size: %d MB\n", sb.file_size_mb);
+	printf("FAT offset: %d\n", sb.FAT_offset);
+	printf("Free map offset: %d\n", sb.FREEMAP_offset);
+	printf("Root directory offset: %d\n", sb.ROOTDIR_offset);
+	printf("Data offset: %d\n", sb.DATA_offset);
+	printf("Block size: %d\n", sb.block_size);
+	printf("File size in blocks: %d\n", sb.file_size_blocks);
+	printf("\n");
+	
+	//read + define FAT
+	fseek(disk, BLOCK_SIZE * sb.FAT_offset, SEEK_SET);
+	fwrite(FAT, (sb.file_size_blocks * sizeof(FATEntry)), 1, disk);
+	printf("FAT Info:\n");
+	int iter = 10;
+	if ((int)sb.file_size_blocks < 10){
+		iter = (int)sb.file_size_blocks;
+	}
+	for (int i = 0; i < iter; i++) {
+	    //replace 10 with sb.file_size_blocks to print entire data section
+        printf("FAT cell %d: %d\n", i, FAT[i].block_number); 
+	}
+	printf("\n");
+	
+	//read + define bitmap
+	fseek(disk, BLOCK_SIZE * sb.FREEMAP_offset, SEEK_SET);
+	fwrite(&bitmap, sizeof(BitmapBlock), 1, disk);
+	printf("Bitmap Info:\n");
+	for (int i = 0; i < BLOCK_SIZE; i++) {
+	    printf("%d", (bitmap.bitmap[i]));
+	}
+	printf("\n");
+	
+	//read + define rootdirentry
+	fseek(disk, BLOCK_SIZE * sb.ROOTDIR_offset, SEEK_SET);
+	fwrite(&root_dir_entry, sizeof(DirectoryEntry), 1, disk); //Directory Entry is size: 19 bytes
+	printf("Root directory: %s\n", root_dir_entry.filename);
+	printf("First block: %d\n", root_dir_entry.first_logical_cluster);
+    // printf("file size: %d\n", root_dir_entry.file_size);
+    printf("File type: %d\n", root_dir_entry.type);
+	printf("\n");
+	
+	//read + define datablock section
+	fseek(disk, BLOCK_SIZE * sb.DATA_offset, SEEK_SET); // Move to first block in data section
+	fwrite(data_section, BLOCK_SIZE, sb.file_size_blocks, disk); //Directory is size: 512 bytes
+	printf("Data section in use (max first 10 blocks): \n");
+	printf("If directory, print the first entry\n");
+
+    for (int i = 0; i < iter; i++) {
+        // replace 10 with sb.file_size_blocks to print entire data section
+		// print block content only if in use
+		if (bitmap.bitmap[i] == 0){
+			printf("Block %d: %s\n", i, data_section[i].buffer);
+		}
+    }
+    printf("\n");
+
+	fclose(disk);
+	printf("Unmounting done\n \n");
+}
+
 void is_success(int val) {
 	if (val == 0) {
 		printf("Successfully closed file~!\n");
