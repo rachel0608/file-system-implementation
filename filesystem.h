@@ -43,6 +43,11 @@ typedef struct {
 } FileHandle; // FileHandle loosely based on Unix systems’s FileHandle (may not need?)
 
 extern superblock sb;
+extern FATEntry *FAT = NULL;
+extern BitmapBlock bitmap;
+extern DirectoryEntry root_dir_entry;
+extern Directory *root_dir = NULL;
+extern datablock *data_section = NULL;
 
 FileHandle* f_open(char* path, char* access); // access = w/w+, r/r+, a/a+ maybe add group later as param
 int f_read(FileHandle *file, void* buffer, int bytes);
