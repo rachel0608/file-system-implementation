@@ -700,9 +700,50 @@ int f_remove(char* path) {
 // 	return 0;
 // }
 
-// int f_rmdir(char* path) {
-// 	return 0;
-// }
+int f_rmdir(char* path) {
+	// open dir to be removed
+	DirectoryEntry* target = f_opendir(path);
+	if (target == NULL) {
+		printf("f_rmdir: Directory %s not found\n", path);
+		return -1;
+	}
+
+	// check if the directory is empty
+	if (target->first_logical_cluster != EMPTY) {
+		printf("f_rmdir: Directory %s is not empty\n", path);
+		return -1;
+	}
+
+	// remove the directory
+	memset(target, 0, sizeof(DirectoryEntry));
+	printf("f_rmdir: Directory %s removed\n", path);
+
+	// find the parent dir and calculate the number of children dirs
+	printf("f_rmdir: Finding parent directory of %s...\n", path);
+	char parent_path[2048];
+	strncpy(parent_path, path, sizeof(parent_path) - 1);
+	reformat_path(parent_path);
+
+	DirectoryEntry* parent_entry = f_opendir(parent_path);
+	if (parent_entry == NULL) {
+		printf("ERROR: Directory does not exist.\n");
+		return NULL;
+	}
+
+	Directory* all_dirs = f_readdir(parent_entry);
+	if (all_dirs == NULL) {
+		// mark parent dir as empty
+		printf("f_rmdir: Parent directory %s is now empty\n", parent_path);
+		parent_entry->first_logical_cluster = EMPTY;
+		print_subdir(parent_entry);
+	} else {
+		printf("f_rmdir: Parent directory's remaining subdirs\n");
+		print_dir(all_dirs);
+	}
+
+	return 0;
+
+}
 
 // to be called before the mainloop or testing
 void fs_mount(char *diskname) {
@@ -896,6 +937,57 @@ void test_remove_disk_1(){
 	} else {
 		printf("Remove failed. Not expected!!! \n");
 	}
+}
+
+void test_removedir_disk_1() {
+	printf("1. Remove /Essay (non-existent)\n");
+	int res = f_rmdir("/Essay");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed as expected.\n");
+	}
+
+	printf("\n2. Remove /Desktop/CS355/labs/lab1 (labs/ should be empty afterwards)\n");
+	res = f_rmdir("/Desktop/CS355/labs/lab1");
+	if (res == 0){
+		printf("Successfully removed /Desktop/CS355/labs/lab1\n");
+	} else {
+		printf("Remove failed.\n");
+	}
+
+	printf("\n3. Remove /Desktop/CS355 (not empty)\n");
+	res = f_rmdir("/Desktop/CS355");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed as expected.\n");
+	}
+
+	printf("\n4. Remove /Desktop/CS355/blog_1.txt (file)\n");
+	res = f_rmdir("/Desktop/CS355/blog_1.txt");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed as expected.\n");
+	}
+
+	printf("\n5. Remove root directory\n");
+	res = f_rmdir("/");
+	if (res == 0){
+		printf("Remove success. Not expected!!!\n");
+	} else {
+		printf("Remove failed as expected.\n");
+	}
+
+	printf("\n6. Remove /Download (directory)\n");
+	res = f_rmdir("/Download");
+	if (res == 0){
+		printf("Successfully removed /Download\n");
+	} else {
+		printf("Remove failed.\n");
+	}
+
 }
 
 void test_opendir_readdir_disk_1() {
@@ -1202,10 +1294,11 @@ void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
 	// test_opendir_readdir_disk_1();
 	// test_open_read_disk_1();
-	test_remove_disk_1();
+	// test_remove_disk_1();
+	test_removedir_disk_1();
 
 	// unmount
-	fs_unmount("./disks/fake_disk_1.img");
+	// fs_unmount("./disks/fake_disk_1.img");
 }
 
 int main(void) {
