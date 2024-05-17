@@ -696,10 +696,6 @@ int f_remove(char* path) {
 // 	return 0;
 // } not implemented~
 
-// int f_mkdir(char* path) {
-// 	return 0;
-// }
-
 int f_rmdir(char* path) {
 	// open dir to be removed
 	DirectoryEntry* target = f_opendir(path);
@@ -741,6 +737,95 @@ int f_rmdir(char* path) {
 		// else print remaining subdirs
 		printf("f_rmdir: Parent directory's remaining subdirs\n");
 		print_dir(all_dirs);
+	}
+
+	return 0;
+
+}
+
+int f_mkdir(char* path) {
+	// find the parent directory
+	char parent_path[2048];
+	strncpy(parent_path, path, sizeof(parent_path) - 1);
+	reformat_path(parent_path);
+
+	DirectoryEntry* parent_entry = f_opendir(parent_path);
+	if (parent_entry == NULL) {
+		printf("ERROR: Directory does not exist.\n");
+		return -1;
+	}
+
+	// find the parent directory
+	char* new_dirname = find_relative_path(path);
+	if (new_dirname == NULL) {
+		printf("ERROR: Invalid directory name.\n");
+		return -1;
+	}
+
+	// check if the directory already exists
+	Directory* all_dirs = f_readdir(parent_entry);
+	if (all_dirs != NULL) {
+		for (int i = 0; i < num_dir_per_block; i++) {
+			if (compare_filename(new_dirname, &all_dirs->entries[i])) {
+				printf("ERROR: Directory already exists.\n");
+				return -1;
+			}
+		}
+	}
+
+	// if parent dir is empty, find an empty cluster in bitmap and update parent dir
+	// else add a new DirectoryEntry to parent dir's first logical cluster
+	DirectoryEntry* new_entry = NULL;
+	if (parent_entry->first_logical_cluster == EMPTY) {
+		printf("Parent directory is empty.\n");
+		// find an empty cluster in bitmap
+		int empty_cluster = -1;
+		for (int i = 0; i < (int) sb.file_size_blocks; i++) {
+			if (bitmap.bitmap[i] == 1) {
+				empty_cluster = i;
+				printf("Found empty cluster at index %d\n", empty_cluster);
+				break;
+			}
+		}
+
+		if (empty_cluster == -1) {
+			printf("ERROR: No empty clusters available.\n");
+			return -1;
+		}
+
+		new_entry = (DirectoryEntry*) &data_section[empty_cluster].buffer;
+		parent_entry->first_logical_cluster = empty_cluster;
+		update_bitmap(&bitmap, empty_cluster, 0);
+	} else {
+		// find space in the cluster to write a new DirectoryEntry
+		for (int i = 0; i < num_dir_per_block; i++) {
+			if (strcmp(all_dirs->entries[i].filename, "") == 0) {
+				new_entry = &all_dirs->entries[i];
+				printf("Found empty directory entry at index %d\n", i);
+				break;
+			}
+		}
+
+		if (new_entry == NULL) {
+			printf("ERROR: No empty directory entries available.\n");
+			return -1;
+		}
+	}
+
+	// create the new directory
+	memcpy(new_entry->filename, new_dirname, 8);
+	new_entry->type = 1;
+	new_entry->first_logical_cluster = EMPTY;
+	new_entry->file_size = 0;
+
+	printf("Directory %s created in %s\n", new_dirname, parent_path);
+	print_subdir(new_entry);
+	printf("Parent directory's info\n");
+	all_dirs = f_readdir(parent_entry);
+	if (all_dirs != NULL) {
+		print_dir(all_dirs);
+	} else {
+		printf("ERROR: Parent directory is empty\n");
 	}
 
 	return 0;
@@ -988,6 +1073,33 @@ void test_removedir_disk_1() {
 		printf("Successfully removed /Download\n");
 	} else {
 		printf("Remove failed.\n");
+	}
+
+}
+
+void test_mkdir_disk_1() {
+	printf("1. Make directory /Desktop/CS355/labs/lab2 (labs/ is not empty)\n");
+	int res = f_mkdir("/Desktop/CS355/labs/lab2");
+	if (res == 0){
+		printf("Successfully created /Desktop/CS355/labs/lab2\n");
+	} else {
+		printf("Make directory failed.\n");
+	}
+
+	printf("\n2. Make directory /Desktop/CS355 (already exists)\n");
+	res = f_mkdir("/Desktop/CS355");
+	if (res == 0){
+		printf("Make directory success. Not expected!!!\n");
+	} else {
+		printf("Make directory failed as expected.\n");
+	}
+
+	printf("\n3. Make directory /Download/Images (Download/ is empty)\n");
+	res = f_mkdir("/Download/Images");
+	if (res == 0){
+		printf("Successfully created /Download/Images\n");
+	} else {
+		printf("Make directory failed.\n");
 	}
 
 }
@@ -1298,6 +1410,7 @@ void test_disk_1() {
 	// test_open_read_disk_1();
 	// test_remove_disk_1();
 	test_removedir_disk_1();
+	// test_mkdir_disk_1();
 
 	// unmount
 	fs_unmount("./disks/fake_disk_1.img");
