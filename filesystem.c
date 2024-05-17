@@ -89,6 +89,14 @@ void print_file_handle(FileHandle* file) {
 	}
 }
 
+void print_bitmap() {
+	printf("--- current bitmap ---\n");
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+	    printf("%d", (bitmap.bitmap[i]));
+	}
+	printf("\n");
+}
+
 void reformat_path(char* path) { // removes the file from dir path
 	if (path == NULL || *path == '\0') {
         printf("Invalid input: NULL pointer or empty string.\n");
@@ -614,13 +622,7 @@ void update_bitmap(BitmapBlock *bitmap_block, int index, int value) {
         return;
     }
 
-    if (value == 0) {
-        // set block as free
-        bitmap_block->bitmap[index / 8] &= ~(1 << (index % 8));
-    } else {
-        // set block as used
-        bitmap_block->bitmap[index / 8] |= 1 << (index % 8);
-    }
+	bitmap_block->bitmap[index] = value;
 }
 
 // Find the directory entry for a file
@@ -690,6 +692,7 @@ int f_remove(char* path) {
         current_cluster = next_cluster;
     }
 
+	print_bitmap();
 	return 0;
 }
 
@@ -874,10 +877,7 @@ void fs_mount(char *diskname) {
 	//read + define bitmap
 	fseek(disk, BLOCK_SIZE * sb.FREEMAP_offset, SEEK_SET);
 	fread(&bitmap, sizeof(BitmapBlock), 1, disk);
-	printf("Bitmap Info:\n");
-	for (int i = 0; i < BLOCK_SIZE; i++) {
-	    printf("%d", (bitmap.bitmap[i]));
-	}
+	print_bitmap();
 	printf("\n");
 	
 	//read + define rootdirentry
@@ -954,10 +954,7 @@ void fs_unmount(char *diskname) {
 	//read + define bitmap
 	fseek(disk, BLOCK_SIZE * sb.FREEMAP_offset, SEEK_SET);
 	fwrite(&bitmap, sizeof(BitmapBlock), 1, disk);
-	printf("Bitmap Info:\n");
-	for (int i = 0; i < BLOCK_SIZE; i++) {
-	    printf("%d", (bitmap.bitmap[i]));
-	}
+	print_bitmap();
 	printf("\n");
 	
 	//read + define rootdirentry
@@ -1409,8 +1406,8 @@ void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
 	// test_opendir_readdir_disk_1();
 	// test_open_read_disk_1();
-	// test_remove_disk_1();
-	test_removedir_disk_1();
+	test_remove_disk_1();
+	// test_removedir_disk_1();
 	// test_mkdir_disk_1();
 
 	// unmount

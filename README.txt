@@ -32,8 +32,6 @@ Program Files:
             filesystem.c
             fake_disk_1.c
             fake_disk_2.c
-            fat.h
-            fat.c
             /disks - Folder containing all the compiled fake disks
                     (fake_disk_1.img & fake_disk_2.img) which gets updated when
                     make fake_disks is called.
@@ -110,9 +108,7 @@ Summary of Features and EC Completed:
         filesystem.h
         filesystem.c
         format.c
-        fat.h
-        fat.c
-   
+
    Part 0 - Fake Test Disks:
         fake_disk_1.c
         fake_disk_2.c
@@ -130,12 +126,6 @@ File Directory:
     
     format.c:
         This is program to format the disk.
-    
-    fat.h:
-        This is the header for FAT.
-    
-    fat.c:
-        This is the implementation for FAT.
     
     fake_disk_1.c:
         This program contains a fake disk.
