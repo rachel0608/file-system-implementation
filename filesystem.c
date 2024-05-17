@@ -487,33 +487,33 @@ int f_read(FileHandle *file, void* buffer, int bytes) {
 }
 
 // read file contents from start cluster
-void fat_read_file_contents(FATEntry *start_cluster, uint32_t file_size, uint8_t *buffer) {
-    // Initialize variables for tracking the current cluster and buffer offset
-    FATEntry current_cluster = *start_cluster;
-    uint32_t bytes_read = 0;
+// void fat_read_file_contents(FATEntry *start_cluster, uint32_t file_size, uint8_t *buffer) {
+//     // Initialize variables for tracking the current cluster and buffer offset
+//     FATEntry current_cluster = *start_cluster;
+//     uint32_t bytes_read = 0;
 
-    // Read file data from clusters until the entire file is read
-    while (bytes_read < file_size) {
-        // Calculate the block number corresponding to the current cluster
-        uint16_t block_number = current_cluster.block_number;
+//     // Read file data from clusters until the entire file is read
+//     while (bytes_read < file_size) {
+//         // Calculate the block number corresponding to the current cluster
+//         uint16_t block_number = current_cluster.block_number;
 
-        // Determine how many bytes to read from the current block
-        uint32_t bytes_to_read = (file_size - bytes_read < BLOCK_SIZE) ? (file_size - bytes_read) : BLOCK_SIZE;
+//         // Determine how many bytes to read from the current block
+//         uint32_t bytes_to_read = (file_size - bytes_read < BLOCK_SIZE) ? (file_size - bytes_read) : BLOCK_SIZE;
 
-        // Read data from the block using f_read and copy it into the buffer
-        int result = f_read(&data_section[block_number], buffer + bytes_read, bytes_to_read);
-        if (result < 0) {
-            // Handle error
-            // For simplicity, we're just printing an error message here
-            printf("Error reading file data\n");
-            return;
-        }
+//         // Read data from the block using f_read and copy it into the buffer
+//         int result = f_read(&data_section[block_number], buffer + bytes_read, bytes_to_read);
+//         if (result < 0) {
+//             // Handle error
+//             // For simplicity, we're just printing an error message here
+//             printf("Error reading file data\n");
+//             return;
+//         }
 
-        // Update bytes read and move to the next cluster
-        bytes_read += bytes_to_read;
-        current_cluster = FAT[block_number];
-    }
-}
+//         // Update bytes read and move to the next cluster
+//         bytes_read += bytes_to_read;
+//         current_cluster = FAT[block_number];
+//     }
+// }
 
 // allocate a chain of clusters for a new file
 void fat_allocate_cluster_chain(FATEntry* start_cluster, uint16_t start_cluster_idx, uint32_t file_size) {
@@ -543,10 +543,10 @@ void fat_allocate_cluster_chain(FATEntry* start_cluster, uint16_t start_cluster_
     }
 }
 // update directory entry for a file
-void fat_update_directory_entry(const char* filename, FATEntry *start_cluster, uint32_t file_size) {
+// void fat_update_directory_entry(const char* filename, FATEntry *start_cluster, uint32_t file_size) {
     // Find the directory entry corresponding to the filename
     // Update the entry with the new start cluster and file size
-}
+// }
 
 // int f_write(FileHandle *file, void *buffer, size_t bytes) {
 //     if (file == NULL || buffer == NULL) {
@@ -614,6 +614,7 @@ void update_bitmap(BitmapBlock *bitmap_block, int index, int value) {
 
     if (index < 0 || index >= BLOCK_SIZE * 8) {
         printf("Error: Invalid index. Index should be between 0 and %d.\n", BLOCK_SIZE * 8 - 1);
+		printf("%d\n", index);
         return;
     }
 
@@ -727,15 +728,15 @@ int f_rmdir(char* path) {
 	DirectoryEntry* parent_entry = f_opendir(parent_path);
 	if (parent_entry == NULL) {
 		printf("ERROR: Directory does not exist.\n");
-		return NULL;
+		return -1;
 	}
 
 	Directory* all_dirs = f_readdir(parent_entry);
 	if (all_dirs == NULL) {
 		// if no child left, mark parent dir as empty
 		printf("f_rmdir: Parent directory %s is now empty\n", parent_path);
-		parent_entry->first_logical_cluster = EMPTY;
 		update_bitmap(&bitmap, parent_entry->first_logical_cluster, 1);
+		parent_entry->first_logical_cluster = EMPTY;
 		print_subdir(parent_entry);
 	} else {
 		// else print remaining subdirs
@@ -916,7 +917,7 @@ void fs_mount(char *diskname) {
 }
 
 void fs_unmount(char *diskname) {
-	printf("==== UNMOUNTING... ====\n");
+	printf("\n==== UNMOUNTING... ====\n");
 	// extern superblock, FAT, bitmap, rootdir, data_section globals declared in header, defined in this func
 	FILE *disk = fopen(diskname, "wb");
 	if (disk == NULL) {
@@ -1025,6 +1026,7 @@ void test_remove_disk_1(){
 }
 
 void test_removedir_disk_1() {
+	printf("\n\n==== TESTING F_RMDIR() ====\n");
 	printf("1. Remove /Essay (non-existent)\n");
 	int res = f_rmdir("/Essay");
 	if (res == 0){
@@ -1076,6 +1078,7 @@ void test_removedir_disk_1() {
 }
 
 void test_mkdir_disk_1() {
+	printf("\n\n==== TESTING MKDIR() ====\n");
 	printf("1. Make directory /Desktop/CS355/labs/lab2 (labs/ is not empty)\n");
 	int res = f_mkdir("/Desktop/CS355/labs/lab2");
 	if (res == 0){
@@ -1404,13 +1407,14 @@ void test_open_read_disk_1() {
 
 void test_disk_1() {
 	fs_mount("./disks/fake_disk_1.img");
-	// test_opendir_readdir_disk_1();
-	// test_open_read_disk_1();
-	test_remove_disk_1();
-	// test_removedir_disk_1();
-	// test_mkdir_disk_1();
 
-	// unmount
+	// ----- UNCOMMENT TO TEST EACH REMOVE FUNCS ------
+	test_opendir_readdir_disk_1();
+	test_open_read_disk_1();
+	test_mkdir_disk_1();
+	// test_remove_disk_1();
+	// test_removedir_disk_1();
+
 	fs_unmount("./disks/fake_disk_1.img");
 }
 

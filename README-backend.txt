@@ -8,6 +8,9 @@ NAME:
     The testing we've kept are all for fake_disk_1.
     However, all the implemented features also work for fake_disk_2. 
 
+    test_remove_disk_1() and test_removedir_disk_1() in main() should be uncommented 
+    and run individually
+
 Program Files:
 ==============
     For formatting the disk:
@@ -36,6 +39,9 @@ How to Run:
     make run_disks
     ./filesystem
 
+    test_remove_disk_1() and test_removedir_disk_1() in main() should be uncommented 
+    and run individually
+
 * Can also compile each fake_disk individually using: ./fake_disk_1
                                                       ./fake_disk_2
 
@@ -43,7 +49,7 @@ Implemented Features:
 =====================
     Part 1. Working Commands:
         - f_open        (does not include permission check / creating new file)
-        - f_read
+        - f_read        (assumes file position is 0)
         - f_close       (no valgrind errors)
         - f_opendir
         - f_readdir
@@ -309,6 +315,164 @@ IMPORTANT NOTES
         ...
         ERROR: File does not exist.
         NOTE: Current version of f_open() cannot handle new file creation. 
+
+    === tests included in test_rmdir_disk_1() ===
+    - f_rmdir()
+        1. Remove /Essay (non-existent)
+        Looking up directory: Essay...
+        Reading directory entries for '/'...
+        ...
+        f_opendir: cannot find given dir, Essay. 
+        f_rmdir: Directory /Essay not found
+        Remove failed as expected.
+
+        2. Remove /Desktop/CS355/labs/lab1 (labs/ should be empty afterwards)
+        Looking up directory: Desktop...
+        ...
+        Looking up directory: CS355...
+        ...
+        Looking up directory: labs...
+        ...
+        Found: labs
+        Looking up directory: lab1...
+        ...
+        Found: lab1
+        Successfully opened directory ---
+        f_rmdir: Directory /Desktop/CS355/labs/lab1 removed
+        f_rmdir: Finding parent directory of /Desktop/CS355/labs/lab1...
+        Looking up directory: Desktop...
+        ...
+        Looking up directory: CS355...
+        ...
+        Looking up directory: labs...
+        ...
+        Found: labs
+        Successfully opened directory ---
+        readdir: empty directory entries. Returning NULL.
+        f_rmdir: Parent directory /Desktop/CS355/labs/ is now empty
+        === Directory Entry Info === 
+        Filename: labs
+        Extension: 
+        First logical cluster: 65535 (empty)
+        Successfully removed /Desktop/CS355/labs/lab1
+
+        3. Remove /Desktop/CS355 (not empty)
+        Looking up directory: Desktop...
+        ...
+        Looking up directory: CS355...
+        ...
+        Found: CS355
+        Successfully opened directory ---
+        f_rmdir: Directory /Desktop/CS355 is not empty
+        Remove failed as expected.
+
+        4. Remove /Desktop/CS355/blog_1.txt (file)
+        Looking up directory: Desktop...
+        ...
+        Looking up directory: CS355...
+        ...
+        Looking up directory: blog_1.txt...
+        ...
+        f_opendir: cannot find given dir, blog_1.txt. 
+        f_rmdir: Directory /Desktop/CS355/blog_1.txt not found
+        Remove failed as expected.
+
+        5. Remove root directory
+        Directory opened: /
+        f_rmdir: Directory / is not empty
+        Remove failed as expected.
+
+        6. Remove /Download (directory)
+        Looking up directory: Download...
+        ...
+        Found: Download
+        Successfully opened directory ---
+        f_rmdir: Directory /Download removed
+        f_rmdir: Finding parent directory of /Download...
+        Directory opened: /
+        Reading directory entries for '/'...
+        Entry 0 Desktop
+        f_rmdir: Parent directory's remaining subdirs
+        === Directory Entry Info === 
+        Filename: Desktop
+        Extension: 
+        First logical cluster: 1
+        === Directory Entry Info === 
+        Filename: Hello
+        Extension: txt
+        First logical cluster: 2
+        ===========
+        Successfully removed /Download
+
+    === tests included in test_mkdir_disk_1() ===
+    - f_mkdir()
+        1. Make directory /Desktop/CS355/labs/lab2 (labs/ is not empty)
+        Looking up directory: Desktop...
+        ...
+        Looking up directory: CS355...
+        ...
+        Looking up directory: labs...
+        ...
+        Found: labs
+        Successfully opened directory ---
+        Reading directory entries for 'labs'...
+        Entry 0 lab1
+        Found empty directory entry at index 1
+        Directory lab2 created in /Desktop/CS355/labs/
+        === Directory Entry Info === 
+        Filename: lab2
+        Extension: 
+        First logical cluster: 65535 (empty)
+        Parent directory's info
+        Reading directory entries for 'labs'...
+        Entry 0 lab1
+        Entry 1 lab2
+        === Directory Entry Info === 
+        Filename: lab1
+        Extension: 
+        First logical cluster: 65535 (empty)
+        === Directory Entry Info === 
+        Filename: lab2
+        Extension: 
+        First logical cluster: 65535 (empty)
+        ===========
+        Successfully created /Desktop/CS355/labs/lab2
+
+        2. Make directory /Desktop/CS355 (already exists)
+        Looking up directory: Desktop...
+        ...
+        Found: Desktop
+        Successfully opened directory ---
+        Reading directory entries for 'Desktop'...
+        Entry 0 CS355
+        Entry 1 blog_1
+        ERROR: Directory already exists.
+        Make directory failed as expected.
+
+        3. Make directory /Download/Images (Download/ is empty)
+        Looking up directory: Download...
+        Reading directory entries for '/'...
+        ...
+        Found: Download
+        Successfully opened directory ---
+        readdir: given entry is empty.
+        Parent directory is empty.
+        Found empty cluster at index 9
+        Directory Images created in /Download/
+        === Directory Entry Info === 
+        Filename: Images
+        Extension: 
+        First logical cluster: 65535 (empty)
+        Parent directory's info
+        Reading directory entries for 'Download'...
+        Entry 0 Images
+        === Directory Entry Info === 
+        Filename: Images
+        Extension: 
+        First logical cluster: 65535 (empty)
+        ===========
+        Successfully created /Download/Images
+
 
 Limitations:
 ============

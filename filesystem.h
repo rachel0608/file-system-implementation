@@ -24,7 +24,6 @@
 #define BLOCK_SIZE 512
 #define FREEBLOCK 65535
 
-
 // Root directory is also a directory entry
 typedef struct {
     char filename[8];
