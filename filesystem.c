@@ -732,11 +732,13 @@ int f_rmdir(char* path) {
 
 	Directory* all_dirs = f_readdir(parent_entry);
 	if (all_dirs == NULL) {
-		// mark parent dir as empty
+		// if no child left, mark parent dir as empty
 		printf("f_rmdir: Parent directory %s is now empty\n", parent_path);
 		parent_entry->first_logical_cluster = EMPTY;
+		update_bitmap(&bitmap, parent_entry->first_logical_cluster, 1);
 		print_subdir(parent_entry);
 	} else {
+		// else print remaining subdirs
 		printf("f_rmdir: Parent directory's remaining subdirs\n");
 		print_dir(all_dirs);
 	}
@@ -1298,7 +1300,7 @@ void test_disk_1() {
 	test_removedir_disk_1();
 
 	// unmount
-	// fs_unmount("./disks/fake_disk_1.img");
+	fs_unmount("./disks/fake_disk_1.img");
 }
 
 int main(void) {
