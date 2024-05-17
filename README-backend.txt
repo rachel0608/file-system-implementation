@@ -61,8 +61,6 @@ Implemented Features:
         - f_remove()
         - f_mkdir()
         - f_rmdir()
-        - f_mount() (Extra Credit not done)
-        - f_umount() (Extra Credit not done)
 
 How Testing Was Done: (Used Print/Testing Statements to Terminal)
 =================================================================
